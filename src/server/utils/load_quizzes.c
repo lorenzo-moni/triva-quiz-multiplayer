@@ -1,9 +1,10 @@
-#include "utils.h"
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include "utils.h"
 
 int get_directory_total_files(DIR *directory)
 {
@@ -16,8 +17,10 @@ int get_directory_total_files(DIR *directory)
     struct dirent *entry;
     while ((entry = readdir(directory)) != NULL)
     {
-        // Andiamo a verificare che il file che stiamo contando non sia la directory padre, la directory stessa e che il file sia un file regolare
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || entry->d_type != DT_REG)
+        // Andiamo a verificare che il file che stiamo contando non sia la directory
+        // padre, la directory stessa e che il file sia un file regolare
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 ||
+            entry->d_type != DT_REG)
             continue;
         file_count++;
     }
@@ -106,7 +109,7 @@ Quiz *load_quiz_from_file(const char *file_path)
     return quiz;
 }
 
-Quiz **load_quizzes_from_directory(const char *directory_path, int *total_quizzes)
+int load_quizzes_from_directory(const char *directory_path, QuizzesInfo *quizzesInfo)
 {
     struct dirent *entry;               // Puntatore per leggere le informazioni dei file
     DIR *dir = opendir(directory_path); // Apre la directory
@@ -114,19 +117,20 @@ Quiz **load_quizzes_from_directory(const char *directory_path, int *total_quizze
     if (dir == NULL)
     {
         perror("Error in directory opening");
-        return NULL;
+        return -1;
     }
 
-    *total_quizzes = get_directory_total_files(dir);
+    quizzesInfo->total_quizzes = get_directory_total_files(dir);
 
-    // Alloco un array di puntatori a quiz nello heap che verranno popolati uno alla volta leggendo i files della directory
-    Quiz **quiz_array = (Quiz **)malloc((*total_quizzes) * sizeof(Quiz *));
+    // Alloco un array di puntatori a quiz nello heap che verranno popolati uno
+    // alla volta leggendo i files della directory
+    quizzesInfo->quizzes = (Quiz **)malloc((quizzesInfo->total_quizzes) * sizeof(Quiz *));
 
-    if (!quiz_array)
+    if (!quizzesInfo->quizzes)
     {
         perror("Errore di allocazione memoria per l'array dei quiz");
         closedir(dir);
-        return NULL;
+        return -1;
     }
 
     rewinddir(dir);
@@ -135,13 +139,15 @@ Quiz **load_quizzes_from_directory(const char *directory_path, int *total_quizze
     int i = 0;
     while ((entry = readdir(dir)) != NULL)
     {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || entry->d_type != DT_REG)
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 ||
+            entry->d_type != DT_REG)
             continue;
 
-        snprintf(file_path, sizeof(file_path), "%s/%s", directory_path, entry->d_name);
-        quiz_array[i] = load_quiz_from_file(file_path);
+        snprintf(file_path, sizeof(file_path), "%s/%s", directory_path,
+                 entry->d_name);
+        quizzesInfo->quizzes[i] = load_quiz_from_file(file_path);
         i++;
     }
 
-    return quiz_array;
+    return 0;
 }

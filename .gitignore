@@ -1,4 +1,4 @@
-*/build
-server/server
-client/client
+build/
+/server
+/client
 .vscode
