@@ -48,11 +48,12 @@ int main()
             printf("Connessione fallita\n");
             return -1;
         }
+        Message *received_msg = (Message *)malloc(sizeof(Message));
+        int stop = 0;
 
-        while (1)
+        while (!stop)
         {
             // ricevo il messaggio dal server e agisco di conseguenza
-            Message *received_msg = (Message *)malloc(sizeof(Message));
             receive_msg(server_fd, received_msg);
 
             switch (received_msg->type)
@@ -64,16 +65,26 @@ int main()
                 request_available_quizzes(server_fd);
                 break;
             case MSG_RES_QUIZ_LIST:
-                handle_quiz_selection(server_fd, received_msg);
+                handle_quiz_selection(server_fd, received_msg, &stop);
+                break;
+            case MSG_QUIZ_QUESTION:
+                handle_quiz_question(server_fd, received_msg, &stop);
+                break;
+            case MSG_QUIZ_RESULT:
+            case MSG_INFO:
+                handle_message(received_msg);
+                break;
+            case MSG_ERROR:
+                handle_error(received_msg);
                 break;
 
             default:
                 break;
             }
-
-            free(received_msg);
         }
+        free(received_msg);
         close(server_fd);
+        printf("\n");
     }
     return 0;
 }

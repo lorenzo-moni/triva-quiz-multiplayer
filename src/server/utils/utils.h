@@ -15,7 +15,7 @@ typedef enum
 {
     WAITING_FOR_NICKNAME,
     READY,
-    QUIZ_SELECTED
+    PLAYING
 } ClientState;
 
 typedef struct Client
@@ -24,6 +24,7 @@ typedef struct Client
     char *nickname;
     ClientState state;
     struct RankingNode **client_rankings;
+    int current_quiz_id;
 
 } Client;
 
@@ -56,23 +57,24 @@ typedef struct RankingNode
     Client *client;
     int score;
     int is_quiz_completed;
+    int current_question;
     struct RankingNode *prev_node;
     struct RankingNode *next_node;
 
 } RankingNode;
 typedef enum
 {
-    MSG_SET_NICKNAME,      // messaggio inviato dal client per settare il nickname
-    MSG_REQ_NICKNAME,      // messaggio inviato dal server per richiedere al client il nickaname
-    MSG_OK_NICKNAME,       // messaggio inviato dal server per indicare che il nickname scelto è corretto
-    MSG_REQ_QUIZ_LIST,     // messaggio inviato dal client per richiedere la lista dei quiz
-    MSG_RES_QUIZ_LIST,     // messaggio inviato dal server per rispondere alla richiesta del client
-    MSG_QUIZ_SELECT,       // messaggio inviato dal client per selezionare il quiz
-    MSG_QUIZ_SELECT_ERROR, // messaggio inviato dal server per indicare un errore nella selezione del quiz
-    MSG_QUIZ_QUESTION,     // messaggio inviato dal server con la domanda
-    MSG_QUIZ_ANSWER,       // messaggio inviato dal client con la risposta alla domanda
-    MSG_QUIZ_RESULT,       // messaggio inviato dal server con il risultato della risposta
-    MSG_ERROR              // messaggio inviato dal server o dal client per indicare che si è verificato un errore
+    MSG_SET_NICKNAME,  // messaggio inviato dal client per settare il nickname
+    MSG_REQ_NICKNAME,  // messaggio inviato dal server per richiedere al client il nickaname
+    MSG_OK_NICKNAME,   // messaggio inviato dal server per indicare che il nickname scelto è corretto
+    MSG_REQ_QUIZ_LIST, // messaggio inviato dal client per richiedere la lista dei quiz
+    MSG_RES_QUIZ_LIST, // messaggio inviato dal server per rispondere alla richiesta del client
+    MSG_QUIZ_SELECT,   // messaggio inviato dal client per selezionare il quiz
+    MSG_QUIZ_QUESTION, // messaggio inviato dal server con la domanda
+    MSG_QUIZ_ANSWER,   // messaggio inviato dal client con la risposta alla domanda
+    MSG_QUIZ_RESULT,   // messaggio inviato dal server con il risultato della risposta
+    MSG_ERROR,         // messaggio inviato dal server o dal client per indicare che si è verificato un errore
+    MSG_INFO,          // messaggio inviato dal server con un messaggio informativo per il client
 } MessageType;
 
 typedef struct
@@ -88,8 +90,6 @@ void handle_new_client_connection(ClientsInfo *clientsInfo, fd_set *master, int 
 void handle_client(Client *client, ClientsInfo *clientsInfo, QuizzesInfo *quizzesInfo, fd_set *master);
 void init_clients_info(ClientsInfo *clientsInfo, QuizzesInfo *quizzesInfo);
 
-// Ranking List
-
 // Quiz
 
 Quiz *load_quiz_from_file(const char *file_path);
@@ -97,12 +97,15 @@ int load_quizzes_from_directory(const char *directory_path, QuizzesInfo *quizzes
 
 // Dashboard
 
-void show_dashboard(QuizzesInfo *quizzesInfo, ClientsInfo *clientsInfo);
+void show_dashboard(QuizzesInfo *quizzesInfo, ClientsInfo *clientsInfo, int score);
 
 // Ranking
 
-RankingNode *create_ranking_node(Client *client, int selected_quiz_idx);
+RankingNode *create_ranking_node(Client *client);
 void insert_ranking_node(Quiz *quiz, RankingNode *node);
-void list_ranking(Quiz *quiz);
+void list_rankings(Quiz *quiz);
+void list_completed_rankings(Quiz *quiz);
+void update_ranking(RankingNode *node, Quiz *quiz);
+void remove_ranking(RankingNode *node, Quiz *quiz);
 
 #endif // UTILS_H

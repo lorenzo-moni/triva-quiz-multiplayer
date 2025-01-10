@@ -5,15 +5,16 @@
 
 void show_quiz_names(QuizzesInfo *quizzesInfo)
 {
+  printf("Temi:\n");
   for (int i = 0; i < quizzesInfo->total_quizzes; ++i)
     printf("%d - %s\n", i + 1, quizzesInfo->quizzes[i]->name);
 }
 
 void show_clients(ClientsInfo *clientsInfo)
 {
-  printf("Partecipanti (%d)\n", clientsInfo->connected_clients);
+  printf("\nPartecipanti (%d)\n", clientsInfo->connected_clients);
   for (int i = 0; i <= clientsInfo->max_fd; i++)
-    if (clientsInfo->clients[i].state != WAITING_FOR_NICKNAME)
+    if (clientsInfo->clients[i].socket_fd != -1)
       printf("- %s\n", clientsInfo->clients[i].nickname);
 }
 
@@ -21,19 +22,29 @@ void show_scores(QuizzesInfo *quizzesInfo)
 {
   for (int i = 0; i < quizzesInfo->total_quizzes; i++)
   {
-    if (quizzesInfo->quizzes[i]->ranking_head == NULL)
-      continue;
     printf("\nPunteggio Tema %d\n", i + 1);
-    list_ranking(quizzesInfo->quizzes[i]);
+    list_rankings(quizzesInfo->quizzes[i]);
   }
 }
 
-void show_dashboard(QuizzesInfo *quizzesInfo, ClientsInfo *clientsInfo)
+void show_completed_quizes(QuizzesInfo *quizzesInfo)
+{
+  for (int i = 0; i < quizzesInfo->total_quizzes; i++)
+  {
+    printf("\nQuiz Tema %d completato\n", i + 1);
+    list_completed_rankings(quizzesInfo->quizzes[i]);
+  }
+}
+
+void show_dashboard(QuizzesInfo *quizzesInfo, ClientsInfo *clientsInfo, int score)
 {
   printf("Trivia Quiz\n");
   printf("+++++++++++++++++++++++++++\n");
   show_quiz_names(quizzesInfo);
-  printf("+++++++++++++++++++++++++++\n\n");
+  printf("+++++++++++++++++++++++++++\n");
+  if (!score)
+    return;
   show_clients(clientsInfo);
   show_scores(quizzesInfo);
+  show_completed_quizes(quizzesInfo);
 }

@@ -21,3 +21,23 @@ void show_quiz_list(char **quizzes, int total_quizzes)
     }
     printf("+++++++++++++++++++++++++++\n");
 }
+
+void get_console_input(char *buffer, int buffer_size, int *stop, int can_request_score)
+{
+
+    fgets(input, buffer_size, stdin);
+    size_t len = strcspn(input, "\n"); // Trova la posizione di '\n'
+    if (input[len] == '\n')
+        input[len] = '\0'; // Sostituisci '\n' con il terminatore di stringa
+
+    if (strcmp(input, "endquiz") == 0)
+    {
+        *stop = 1;
+        return;
+    }
+
+    //     if (can_request_score && strcmp(input, "show scores") == 0)
+    //     {
+    //     }
+    return;
+}

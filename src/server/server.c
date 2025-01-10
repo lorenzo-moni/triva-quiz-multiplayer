@@ -17,12 +17,12 @@ int main()
     int server_fd, activity;
     ClientsInfo clientsInfo;
     QuizzesInfo quizzesInfo;
-    init_clients_info(&clientsInfo, &quizzesInfo);
     struct sockaddr_in server_address;
 
     fd_set readfds, master; // Set di file descriptor per la `select()`
 
     load_quizzes_from_directory("./quizzes", &quizzesInfo);
+    init_clients_info(&clientsInfo, &quizzesInfo);
 
     // for (int i = 0; i < quizzesInfo.total_quizzes; i++)
     // {
@@ -79,16 +79,18 @@ int main()
     FD_SET(server_fd, &master);
     clientsInfo.max_fd = server_fd;
     Client *clients;
+    int score = 0;
 
     // Ciclo principale del server
     while (1)
     {
         readfds = master;
 
-        show_dashboard(&quizzesInfo, &clientsInfo);
+        show_dashboard(&quizzesInfo, &clientsInfo, score);
 
         // Aspetta eventi con `select()`
         activity = select(clientsInfo.max_fd + 1, &readfds, NULL, NULL, NULL);
+        score = 1;
 
         if ((activity < 0) && (errno != EINTR))
         {

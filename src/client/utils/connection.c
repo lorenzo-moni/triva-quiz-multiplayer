@@ -126,7 +126,8 @@ void handle_nickname_selection(int server_fd, Message *msg)
 {
     char nickname[MAX_PAYLOAD_SIZE];
     printf("%s: ", msg->payload);
-    scanf("%s", nickname);
+
+    get_console_input(nickname, sizeof(nickname), NULL, 0);
 
     Message *reply_msg = create_msg(MSG_SET_NICKNAME, nickname, strlen(nickname));
     send_msg(server_fd, reply_msg);
@@ -161,17 +162,36 @@ void deserialize_quiz_list(Message *msg, char ***quizzes, int *total_quizzes)
     }
 }
 
-void handle_quiz_selection(int server_fd, Message *msg)
+void handle_quiz_selection(int server_fd, Message *msg, int *stop)
 {
     char **quizzes_name;
     int total_quizzes;
     deserialize_quiz_list(msg, &quizzes_name, &total_quizzes);
     show_quiz_list(quizzes_name, total_quizzes);
-    printf("La tua scelta: ");
-    unsigned int choice;
-    scanf("%u", &choice);
-    uint16_t net_choice = htons(choice);
 
-    Message *reply_msg = create_msg(MSG_QUIZ_SELECT, (char *)&net_choice, sizeof(uint16_t));
+    char answer[MAX_PAYLOAD_SIZE];
+    get_console_input(answer, sizeof(answer), stop, 1);
+
+    Message *reply_msg = create_msg(MSG_QUIZ_SELECT, answer, strlen(answer));
     send_msg(server_fd, reply_msg);
+}
+
+void handle_error(Message *msg)
+{
+    printf("\n%s\n", msg->payload);
+}
+void handle_message(Message *msg)
+{
+    printf("\n%s\n", msg->payload);
+}
+
+void handle_quiz_question(int server_fd, Message *msg, int *stop)
+{
+    char answer[MAX_PAYLOAD_SIZE];
+    printf("\n%s", msg->payload);
+    printf("\nRisposta: ");
+    get_console_input(answer, sizeof(answer), stop, 1);
+
+    Message *answer_msg = create_msg(MSG_QUIZ_ANSWER, answer, strlen(answer));
+    send_msg(server_fd, answer_msg);
 }

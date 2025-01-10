@@ -6,6 +6,9 @@
 #include "utils.h"
 #include <sys/select.h>
 
+// La funzione init_clients_info va a gestire l'inizializzazione delle informazioni relative ai clienti che si possono connettere al sistema
+// andando ad allocare dinamicamente le informazioni relative alla memorizzazione della posizione in classifica per ogni cliente in base al numero di quiz che sono
+// stati caricati a runtime
 void init_clients_info(ClientsInfo *clientsInfo, QuizzesInfo *quizzesInfo)
 {
     clientsInfo->connected_clients = 0;
@@ -14,6 +17,7 @@ void init_clients_info(ClientsInfo *clientsInfo, QuizzesInfo *quizzesInfo)
         clientsInfo->clients[i].socket_fd = -1;
         clientsInfo->clients[i].client_rankings = malloc(quizzesInfo->total_quizzes * sizeof(RankingNode *));
         memset(clientsInfo->clients[i].client_rankings, 0, quizzesInfo->total_quizzes * sizeof(RankingNode *));
+        clientsInfo->clients[i].current_quiz_id = -1;
     }
 }
 
@@ -175,6 +179,7 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 
     for (int i = 0; i < quizzesInfo->total_quizzes; i++)
     {
+        printf("%s", quizzesInfo->quizzes[i]->name);
         string_len = strlen(quizzesInfo->quizzes[i]->name);
         net_string_len = htons(string_len);
         memcpy(pointer, &net_string_len, sizeof(uint16_t));
@@ -219,11 +224,11 @@ void handle_client_nickname(Client *client, Message *received_msg,
     send_msg(client->socket_fd, nickname_ok_msg);
 }
 
-void handle_client_disconnection(Client *client, fd_set *master, ClientsInfo *clientsInfo)
+void handle_client_disconnection(Client *client, fd_set *master, ClientsInfo *clientsInfo, QuizzesInfo *quizzesInfo)
 {
     FD_CLR(client->socket_fd, master);
-
     close(client->socket_fd);
+    // aggiorno max_fd
     if (client->socket_fd == clientsInfo->max_fd)
     {
         clientsInfo->max_fd = -1;
@@ -231,27 +236,118 @@ void handle_client_disconnection(Client *client, fd_set *master, ClientsInfo *cl
             if (FD_ISSET(i, master) && i > clientsInfo->max_fd)
                 clientsInfo->max_fd = i;
     }
+    // pulisco le strutture allocate in client
+    client->current_quiz_id = -1;
+    for (int i = 0; i < quizzesInfo->total_quizzes; i++)
+    {
+        remove_ranking(client->client_rankings[i], quizzesInfo->quizzes[i]);
+        client->client_rankings[i] = NULL;
+    }
     client->socket_fd = -1;
     if (client->nickname)
         free(client->nickname);
     clientsInfo->connected_clients--;
 }
 
+void send_quiz_question(Client *client, Quiz *quiz)
+{
+    int question_to_send_id = client->client_rankings[client->current_quiz_id]->current_question;
+    if (question_to_send_id >= quiz->total_questions)
+        return;
+    char *question_to_send = quiz->questions[question_to_send_id];
+
+    Message *msg = create_msg(MSG_QUIZ_QUESTION, question_to_send, strlen(question_to_send));
+    send_msg(client->socket_fd, msg);
+}
+
+void verify_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
+{
+    char *user_answer = msg->payload;
+
+    // if (strcmp(user_answer, "show score"))
+    // {
+    //     send_score();
+    //     send_quiz_question();
+    // }
+
+    RankingNode *current_ranking = client->client_rankings[client->current_quiz_id];
+    Quiz *playing_quiz = quizzesInfo->quizzes[client->current_quiz_id];
+    char *right_answer = playing_quiz->answers[current_ranking->current_question];
+    Message *result_msg;
+    char *payload;
+
+    if (strcmp(user_answer, right_answer) == 0)
+    {
+        payload = "Risposta corretta";
+        current_ranking->score += 1;
+        update_ranking(current_ranking, playing_quiz);
+    }
+    else
+    {
+        payload = "Risposta errata";
+    }
+
+    result_msg = create_msg(MSG_QUIZ_RESULT, payload, strlen(payload));
+    send_msg(client->socket_fd, result_msg);
+
+    current_ranking->current_question += 1;
+    if (current_ranking->current_question == playing_quiz->total_questions)
+    {
+        client->state = READY;
+        current_ranking->is_quiz_completed = 1;
+        char *payload = "Hai terminato il quiz";
+        Message *msg = create_msg(MSG_INFO, payload, strlen(payload));
+        send_msg(client->socket_fd, msg);
+        send_quiz_list(client, quizzesInfo);
+    }
+
+    else
+        send_quiz_question(client, playing_quiz);
+}
+
 void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 {
-    uint16_t selected_quiz_number;
-    selected_quiz_number = ntohs(*(uint16_t *)msg->payload);
+    if (strcmp(msg->payload, "show score") == 0)
+    {
+        return;
+    }
+    char *endptr;
+    unsigned long value = strtoul(str, &endptr, 10);
+
+    // Gestisco le possibili situazioni di errore
+
+    // Il quiz indicato non è disponibile
     if (selected_quiz_number > quizzesInfo->total_quizzes)
     {
         char *message = "Quiz selezionato non valido";
-        Message *error_msg = create_msg(MSG_QUIZ_SELECT_ERROR, message, strlen(message));
+        Message *error_msg = create_msg(MSG_ERROR, message, strlen(message));
         send_msg(client->socket_fd, error_msg);
+
+        send_quiz_list(client, quizzesInfo);
         return;
     }
 
+    // L'utente corrente ha già completato il quiz durante la sessione corrente
+    if (client->client_rankings[selected_quiz_number - 1] != NULL)
+    {
+        char *message = "Il quiz selezionato è già stato completato in questa sessione";
+        Message *error_msg = create_msg(MSG_ERROR, message, strlen(message));
+        send_msg(client->socket_fd, error_msg);
+
+        send_quiz_list(client, quizzesInfo);
+        return;
+    }
+    client->state = PLAYING;
+    client->current_quiz_id = selected_quiz_number - 1;
+
+    // Inizializzo le informazioni relative al Ranking
     Quiz *selected_quiz = quizzesInfo->quizzes[selected_quiz_number - 1];
-    RankingNode *new_node = create_ranking_node(client, selected_quiz_number - 1);
+    RankingNode *new_node = create_ranking_node(client);
+    client->client_rankings[client->current_quiz_id] = new_node;
+
     insert_ranking_node(selected_quiz, new_node);
+
+    send_quiz_question(client, selected_quiz);
 }
 
 void handle_client(Client *client, ClientsInfo *clientsInfo, QuizzesInfo *quizzesInfo, fd_set *master)
@@ -261,7 +357,7 @@ void handle_client(Client *client, ClientsInfo *clientsInfo, QuizzesInfo *quizze
     if (res == 0)
     {
         printf("Il client ha chiuso la connessione\n");
-        handle_client_disconnection(client, master, clientsInfo);
+        handle_client_disconnection(client, master, clientsInfo, quizzesInfo);
         free(received_msg);
         return;
     }
@@ -279,6 +375,9 @@ void handle_client(Client *client, ClientsInfo *clientsInfo, QuizzesInfo *quizze
         send_quiz_list(client, quizzesInfo);
     else if (received_msg->type == MSG_QUIZ_SELECT && client->state == READY)
         handle_quiz_selection(client, received_msg, quizzesInfo);
+
+    else if (received_msg->type == MSG_QUIZ_ANSWER && client->state == PLAYING)
+        verify_quiz_answer(client, received_msg, quizzesInfo);
 
     free(received_msg);
 }

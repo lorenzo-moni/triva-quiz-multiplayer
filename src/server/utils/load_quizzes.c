@@ -43,7 +43,6 @@ Quiz *load_quiz_from_file(const char *file_path)
         fclose(file);
         return NULL;
     }
-
     quiz->questions = NULL;
     quiz->answers = NULL;
     quiz->ranking_head = NULL;
