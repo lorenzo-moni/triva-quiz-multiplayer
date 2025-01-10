@@ -1,5 +1,10 @@
 Curiosità sulla tecnologia
 
-Chi ha collegato per la prima volta l'Italia ad Internet | Luciano Lenzini
-Qual è il sistema operativo per smartphone più diffuso | Android
-Chi è considerato il padre del computer moderno? | Alan Turing
+Domanda: Chi ha collegato per la prima volta l'Italia ad Internet
+Risposte: luciano lenzini, lenzini
+
+Domanda: Qual è il sistema operativo per smartphone più diffuso
+Risposte: android
+
+Domanda: Chi è considerato il padre del computer moderno?
+Risposte: alan turing, turing

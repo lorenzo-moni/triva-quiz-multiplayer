@@ -160,7 +160,7 @@ void handle_new_client_connection(ClientsInfo *clientsInfo, fd_set *master, int 
 
     Client *client = &clientsInfo->clients[client_fd];
     client->socket_fd = client_fd;
-    client->state = WAITING_FOR_NICKNAME;
+    client->state = LOGIN;
 
     request_client_nickname(client_fd, 0);
 }
@@ -179,7 +179,6 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 
     for (int i = 0; i < quizzesInfo->total_quizzes; i++)
     {
-        printf("%s", quizzesInfo->quizzes[i]->name);
         string_len = strlen(quizzesInfo->quizzes[i]->name);
         net_string_len = htons(string_len);
         memcpy(pointer, &net_string_len, sizeof(uint16_t));
@@ -190,6 +189,8 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
     }
 
     int payload_size = pointer - payload;
+
+    client->state = SELECTING_QUIZ;
 
     Message *msg = create_msg(MSG_RES_QUIZ_LIST, payload, payload_size);
     send_msg(client->socket_fd, msg);
@@ -215,10 +216,10 @@ void handle_client_nickname(Client *client, Message *received_msg,
         request_client_nickname(client->socket_fd, 1);
         return;
     }
+    client->state = LOGGED_IN;
     clientsInfo->connected_clients += 1;
     client->nickname = malloc(strlen(selected_nickname) + 1);
     strcpy(client->nickname, selected_nickname);
-    client->state = READY;
 
     Message *nickname_ok_msg = create_msg(MSG_OK_NICKNAME, "", 0);
     send_msg(client->socket_fd, nickname_ok_msg);
@@ -254,29 +255,55 @@ void send_quiz_question(Client *client, Quiz *quiz)
     int question_to_send_id = client->client_rankings[client->current_quiz_id]->current_question;
     if (question_to_send_id >= quiz->total_questions)
         return;
-    char *question_to_send = quiz->questions[question_to_send_id];
+    char *question_to_send = quiz->questions[question_to_send_id]->question;
 
     Message *msg = create_msg(MSG_QUIZ_QUESTION, question_to_send, strlen(question_to_send));
     send_msg(client->socket_fd, msg);
 }
+void print_char_in_hex(unsigned char c)
+{
+    printf("%02X", c); // Stampa il carattere in due cifre esadecimali
+}
 
-void verify_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
+// Funzione per stampare una stringa in formato esadecimale
+void print_string_in_hex(const char *str)
+{
+    while (*str)
+    {
+        print_char_in_hex((unsigned char)*str);
+        putchar(' '); // Aggiunge uno spazio tra i byte
+        str++;
+    }
+    putchar('\n'); // Nuova riga dopo la stringa
+}
+
+int verify_quiz_answer(char *answer, QuizQuestion *question)
+{
+    printf("Risposta");
+    print_string_in_hex(answer);
+
+    for (int a = 0; a < question->total_answers; a++)
+    {
+        print_string_in_hex(question->answers[a]);
+        if (strcasecmp(answer, question->answers[a]) == 0)
+            return 1;
+    }
+    return 0;
+}
+
+void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 {
     char *user_answer = msg->payload;
 
-    // if (strcmp(user_answer, "show score"))
-    // {
-    //     send_score();
-    //     send_quiz_question();
-    // }
-
     RankingNode *current_ranking = client->client_rankings[client->current_quiz_id];
     Quiz *playing_quiz = quizzesInfo->quizzes[client->current_quiz_id];
-    char *right_answer = playing_quiz->answers[current_ranking->current_question];
+    QuizQuestion *current_question = playing_quiz->questions[current_ranking->current_question];
     Message *result_msg;
     char *payload;
 
-    if (strcmp(user_answer, right_answer) == 0)
+    int correct_answer = verify_quiz_answer(user_answer, current_question);
+
+    if (correct_answer)
     {
         payload = "Risposta corretta";
         current_ranking->score += 1;
@@ -293,11 +320,11 @@ void verify_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
     current_ranking->current_question += 1;
     if (current_ranking->current_question == playing_quiz->total_questions)
     {
-        client->state = READY;
         current_ranking->is_quiz_completed = 1;
         char *payload = "Hai terminato il quiz";
         Message *msg = create_msg(MSG_INFO, payload, strlen(payload));
         send_msg(client->socket_fd, msg);
+        client->state = SELECTING_QUIZ;
         send_quiz_list(client, quizzesInfo);
     }
 
@@ -307,17 +334,18 @@ void verify_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 
 void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 {
-    if (strcmp(msg->payload, "show score") == 0)
-    {
-        return;
-    }
+    printf("quiz: \n");
+
+    // nel caso in cui il payload non contenga
     char *endptr;
-    unsigned long value = strtoul(str, &endptr, 10);
+    int selected_quiz_number = (int)strtoul(msg->payload, &endptr, 10);
+
+    printf("quiz: %d\n", selected_quiz_number);
 
     // Gestisco le possibili situazioni di errore
 
     // Il quiz indicato non è disponibile
-    if (selected_quiz_number > quizzesInfo->total_quizzes)
+    if (*endptr != '\0' || selected_quiz_number > quizzesInfo->total_quizzes)
     {
         char *message = "Quiz selezionato non valido";
         Message *error_msg = create_msg(MSG_ERROR, message, strlen(message));
@@ -337,7 +365,6 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
         send_quiz_list(client, quizzesInfo);
         return;
     }
-    client->state = PLAYING;
     client->current_quiz_id = selected_quiz_number - 1;
 
     // Inizializzo le informazioni relative al Ranking
@@ -347,7 +374,27 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
 
     insert_ranking_node(selected_quiz, new_node);
 
+    client->state = PLAYING;
+
     send_quiz_question(client, selected_quiz);
+}
+
+void handle_ranking_request(Client *client, QuizzesInfo *quizzesInfo)
+{
+    char *payload = "Ecco il tuo ranking";
+    Message *reply_msg = create_msg(MSG_INFO, payload, strlen(payload));
+    send_msg(client->socket_fd, reply_msg);
+
+    switch (client->state)
+    {
+    case PLAYING:
+        send_quiz_question(client, quizzesInfo->quizzes[client->current_quiz_id]);
+        break;
+    case SELECTING_QUIZ:
+        send_quiz_list(client, quizzesInfo);
+    default:
+        break;
+    }
 }
 
 void handle_client(Client *client, ClientsInfo *clientsInfo, QuizzesInfo *quizzesInfo, fd_set *master)
@@ -368,16 +415,21 @@ void handle_client(Client *client, ClientsInfo *clientsInfo, QuizzesInfo *quizze
         return;
     }
 
+    printf("Stato del client che ha inviato un messaggio di tipo %d:  %d\n", received_msg->type, client->state);
+
     if (received_msg->type == MSG_SET_NICKNAME &&
-        client->state == WAITING_FOR_NICKNAME)
+        client->state == LOGIN)
         handle_client_nickname(client, received_msg, clientsInfo);
-    else if (received_msg->type == MSG_REQ_QUIZ_LIST && client->state == READY)
+    else if (received_msg->type == MSG_REQ_QUIZ_LIST && client->state == LOGGED_IN)
         send_quiz_list(client, quizzesInfo);
-    else if (received_msg->type == MSG_QUIZ_SELECT && client->state == READY)
+    else if (received_msg->type == MSG_QUIZ_SELECT && client->state == SELECTING_QUIZ)
         handle_quiz_selection(client, received_msg, quizzesInfo);
 
     else if (received_msg->type == MSG_QUIZ_ANSWER && client->state == PLAYING)
-        verify_quiz_answer(client, received_msg, quizzesInfo);
+        handle_quiz_answer(client, received_msg, quizzesInfo);
+
+    else if (received_msg->type == MSG_REQ_RANKING)
+        handle_ranking_request(client, quizzesInfo);
 
     free(received_msg);
 }

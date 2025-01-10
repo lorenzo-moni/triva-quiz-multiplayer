@@ -14,7 +14,7 @@ void show_clients(ClientsInfo *clientsInfo)
 {
   printf("\nPartecipanti (%d)\n", clientsInfo->connected_clients);
   for (int i = 0; i <= clientsInfo->max_fd; i++)
-    if (clientsInfo->clients[i].socket_fd != -1)
+    if (clientsInfo->clients[i].socket_fd != -1 && clientsInfo->clients[i].nickname)
       printf("- %s\n", clientsInfo->clients[i].nickname);
 }
 

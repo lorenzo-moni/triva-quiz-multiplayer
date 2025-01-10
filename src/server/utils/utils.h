@@ -13,8 +13,9 @@
 
 typedef enum
 {
-    WAITING_FOR_NICKNAME,
-    READY,
+    LOGIN,
+    LOGGED_IN,
+    SELECTING_QUIZ,
     PLAYING
 } ClientState;
 
@@ -36,11 +37,17 @@ typedef struct ClientsInfo
 
 } ClientsInfo;
 
+typedef struct QuizQuestion
+{
+    char *question;
+    char **answers;
+    int total_answers;
+} QuizQuestion;
+
 typedef struct Quiz
 {
     char *name;
-    char **questions;
-    char **answers;
+    QuizQuestion **questions;
     int total_questions;
     struct RankingNode *ranking_head;
     struct RankingNode *ranking_tail;
@@ -75,6 +82,8 @@ typedef enum
     MSG_QUIZ_RESULT,   // messaggio inviato dal server con il risultato della risposta
     MSG_ERROR,         // messaggio inviato dal server o dal client per indicare che si è verificato un errore
     MSG_INFO,          // messaggio inviato dal server con un messaggio informativo per il client
+    MSG_REQ_RANKING,   // messaggio inviato dal client al server per richiedere la classifica
+    MSG_RES_RANKING    // messaggio inviato dal server al client per la classifica
 } MessageType;
 
 typedef struct

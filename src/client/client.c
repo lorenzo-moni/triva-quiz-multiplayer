@@ -15,6 +15,7 @@ int main()
     {
         show_menu();
         scanf("%d", &choice);
+        clear_input_buffer();
         printf("\n");
 
         if (choice == 2)

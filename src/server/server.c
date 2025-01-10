@@ -30,8 +30,11 @@ int main()
     //     printf("%s\n", current_quiz->name);
     //     for (int j = 0; j < current_quiz->total_questions; j++)
     //     {
-    //         printf("%s : %s \n", current_quiz->questions[j],
-    //                current_quiz->answers[j]);
+    //         printf("Domanda: %s \n", current_quiz->questions[j]->question);
+    //         for (int a = 0; a < current_quiz->questions[j]->total_answers; a++)
+    //         {
+    //             printf("Risposta: %s\n", current_quiz->questions[j]->answers[a]);
+    //         }
     //     }
     //     printf("\n");
     // }

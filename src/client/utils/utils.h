@@ -25,6 +25,8 @@ typedef enum
     MSG_QUIZ_RESULT,   // messaggio inviato dal server con il risultato della risposta
     MSG_ERROR,         // messaggio inviato dal server o dal client per indicare che si è verificato un errore
     MSG_INFO,          // messaggio inviato dal server con un messaggio informativo per il client
+    MSG_REQ_RANKING,   // messaggio inviato dal client al server per richiedere la classifica
+    MSG_RES_RANKING    // messaggio inviato dal server al client per la classifica
 } MessageType;
 
 typedef struct
@@ -46,6 +48,7 @@ void deserialize_quiz_list(Message *msg, char ***quizzes, int *total_quizzes);
 void handle_error(Message *msg);
 void handle_message(Message *msg);
 void handle_quiz_question(int server_fd, Message *msg, int *stop);
-void get_console_input(char *buffer, int buffer_size, int *stop, int can_request_score);
+void get_console_input(char *buffer, int buffer_size, int *stop);
+void clear_input_buffer();
 
 #endif // UTILS_H

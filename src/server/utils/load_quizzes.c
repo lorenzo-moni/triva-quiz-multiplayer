@@ -44,7 +44,6 @@ Quiz *load_quiz_from_file(const char *file_path)
         return NULL;
     }
     quiz->questions = NULL;
-    quiz->answers = NULL;
     quiz->ranking_head = NULL;
     quiz->ranking_tail = NULL;
 
@@ -64,19 +63,18 @@ Quiz *load_quiz_from_file(const char *file_path)
     // Conta le domande e risposte
     while ((read = getline(&line, &len, file)) != -1)
     {
-        if (strchr(line, '|'))
+        if (strstr(line, "Domanda"))
             question_count++;
     }
 
     quiz->total_questions = question_count;
 
     // Alloca gli array per domande e risposte
-    quiz->questions = (char **)malloc(question_count * sizeof(char *));
-    quiz->answers = (char **)malloc(question_count * sizeof(char *));
+    quiz->questions = (QuizQuestion **)malloc(question_count * sizeof(QuizQuestion *));
 
-    if (!quiz->questions || !quiz->answers)
+    if (!quiz->questions)
     {
-        perror("Failed to allocate questions and answer arrays");
+        perror("Failed to allocate questions arrays");
         free(quiz);
         free(line);
         fclose(file);
@@ -89,16 +87,48 @@ Quiz *load_quiz_from_file(const char *file_path)
     getline(&line, &len, file); // Salta la linea vuota successiva
 
     int index = 0;
+    QuizQuestion *current_question = NULL;
     while ((read = getline(&line, &len, file)) != -1)
     {
-        line[strcspn(line, "\n")] = '\0'; // Rimuovi il carattere di nuova linea
-        char *delimiter = strchr(line, '|');
-        if (delimiter)
+        line[strcspn(line, "\n")] = '\0';
+
+        if (strncmp(line, "Domanda: ", 9) == 0)
         {
-            *(delimiter - 1) = '\0';
-            quiz->questions[index] = strdup(line);
-            quiz->answers[index] = strdup(delimiter + 2);
-            index++;
+            current_question = (QuizQuestion *)malloc(sizeof(QuizQuestion));
+            current_question->question = strdup(line + 9);
+            current_question->total_answers = 0;
+        }
+        if (strncmp(line, "Risposte: ", 10) == 0)
+        {
+            if (current_question == NULL)
+                continue;
+            char *answers_line = line + 10;
+
+            // creo una copia della linea con le risposte perché strtok modifica la riga di partenza
+            char *copy = strdup(answers_line);
+
+            // conto quante sono le risposte possibili
+            char *token = strtok(copy, ",");
+            while (token)
+            {
+                current_question->total_answers += 1;
+                token = strtok(NULL, ",");
+            }
+            free(copy);
+            // alloco il vettore per le risposte
+            current_question->answers = malloc(sizeof(char *));
+            answers_line = line + 10;
+            // inserisco le risposte effettivamente nel array
+            token = strtok(answers_line, ",");
+            int answer_id = 0;
+            while (token)
+            {
+                while (*token == ' ')
+                    token += 1;
+                current_question->answers[answer_id++] = strdup(token);
+                token = strtok(NULL, ",");
+            }
+            quiz->questions[index++] = current_question;
         }
     }
 
