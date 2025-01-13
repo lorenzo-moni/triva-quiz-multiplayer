@@ -4,6 +4,11 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
+void sigpipe_handler(int sig)
+{
+    printf("Il server ha chiuso la connessione\n");
+}
+
 Message *create_msg(MessageType type, char *payload, size_t payload_len)
 {
 
@@ -178,7 +183,6 @@ void handle_quiz_selection(int server_fd, Message *msg, int *stop)
 
     Message *reply_msg = create_msg(MSG_QUIZ_SELECT, answer, strlen(answer));
     send_msg(server_fd, reply_msg);
-    printf("Ho mandato il messaggio al server\n");
 }
 
 void handle_error(Message *msg)

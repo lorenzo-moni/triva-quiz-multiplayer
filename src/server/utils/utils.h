@@ -101,7 +101,6 @@ void init_clients_info(ClientsInfo *clientsInfo, QuizzesInfo *quizzesInfo);
 
 // Quiz
 
-Quiz *load_quiz_from_file(const char *file_path);
 int load_quizzes_from_directory(const char *directory_path, QuizzesInfo *quizzesInfo);
 
 // Dashboard

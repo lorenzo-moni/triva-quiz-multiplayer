@@ -260,34 +260,14 @@ void send_quiz_question(Client *client, Quiz *quiz)
     Message *msg = create_msg(MSG_QUIZ_QUESTION, question_to_send, strlen(question_to_send));
     send_msg(client->socket_fd, msg);
 }
-void print_char_in_hex(unsigned char c)
-{
-    printf("%02X", c); // Stampa il carattere in due cifre esadecimali
-}
-
-// Funzione per stampare una stringa in formato esadecimale
-void print_string_in_hex(const char *str)
-{
-    while (*str)
-    {
-        print_char_in_hex((unsigned char)*str);
-        putchar(' '); // Aggiunge uno spazio tra i byte
-        str++;
-    }
-    putchar('\n'); // Nuova riga dopo la stringa
-}
 
 int verify_quiz_answer(char *answer, QuizQuestion *question)
 {
-    printf("Risposta");
-    print_string_in_hex(answer);
 
     for (int a = 0; a < question->total_answers; a++)
-    {
-        print_string_in_hex(question->answers[a]);
         if (strcasecmp(answer, question->answers[a]) == 0)
             return 1;
-    }
+
     return 0;
 }
 
@@ -334,13 +314,10 @@ void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 
 void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 {
-    printf("quiz: \n");
 
     // nel caso in cui il payload non contenga
     char *endptr;
     int selected_quiz_number = (int)strtoul(msg->payload, &endptr, 10);
-
-    printf("quiz: %d\n", selected_quiz_number);
 
     // Gestisco le possibili situazioni di errore
 

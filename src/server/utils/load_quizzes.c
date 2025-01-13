@@ -86,8 +86,11 @@ Quiz *load_quiz_from_file(const char *file_path)
     getline(&line, &len, file); // Salta il nome del quiz
     getline(&line, &len, file); // Salta la linea vuota successiva
 
-    int index = 0;
+    int question_idx = 0;
     QuizQuestion *current_question = NULL;
+    int answer_idx = 0;
+    char *token, *answers_line, *copy;
+
     while ((read = getline(&line, &len, file)) != -1)
     {
         line[strcspn(line, "\n")] = '\0';
@@ -98,37 +101,38 @@ Quiz *load_quiz_from_file(const char *file_path)
             current_question->question = strdup(line + 9);
             current_question->total_answers = 0;
         }
+
         if (strncmp(line, "Risposte: ", 10) == 0)
         {
             if (current_question == NULL)
                 continue;
-            char *answers_line = line + 10;
+            answers_line = line + 10;
 
             // creo una copia della linea con le risposte perché strtok modifica la riga di partenza
-            char *copy = strdup(answers_line);
+            copy = strdup(answers_line);
 
             // conto quante sono le risposte possibili
-            char *token = strtok(copy, ",");
+            token = strtok(copy, ",");
             while (token)
             {
                 current_question->total_answers += 1;
                 token = strtok(NULL, ",");
             }
             free(copy);
-            // alloco il vettore per le risposte
-            current_question->answers = malloc(sizeof(char *));
-            answers_line = line + 10;
+            // alloco il vettore che conterrà tutte le risposte
+            current_question->answers = malloc(current_question->total_answers * sizeof(char *));
             // inserisco le risposte effettivamente nel array
             token = strtok(answers_line, ",");
-            int answer_id = 0;
+            answer_idx = 0;
             while (token)
             {
                 while (*token == ' ')
                     token += 1;
-                current_question->answers[answer_id++] = strdup(token);
+                current_question->answers[answer_idx] = strdup(token);
+                answer_idx += 1;
                 token = strtok(NULL, ",");
             }
-            quiz->questions[index++] = current_question;
+            quiz->questions[question_idx++] = current_question;
         }
     }
 
