@@ -10,9 +10,22 @@ int main()
 {
     int server_fd;
     struct sockaddr_in server_address;
+    int choice;
 
-    while (initial_menu())
+    while (1)
     {
+        show_menu();
+        scanf("%d", &choice);
+        clear_input_buffer();
+        printf("\n");
+
+        if (choice == 2)
+            break;
+        else if (choice != 1)
+        {
+            printf("\nOpzione non corretta, riprova\n");
+            continue;
+        }
 
         // Creazione del socket TCP
         if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -37,12 +50,57 @@ int main()
             printf("Connessione fallita\n");
             exit(EXIT_FAILURE);
         }
+        Message *received_msg = (Message *)malloc(sizeof(Message));
+        int ret;
 
-        handle_nickname_selection(server_fd);
+        while (1)
+        {
+            // ricevo il messaggio dal server e agisco di conseguenza
+            ret = receive_msg(server_fd, received_msg);
+            if (ret == 0)
+            {
+                printf("\nIl server ha chiuso la connessione\n");
+                break;
+            }
+            else if (ret == -1)
+            {
+                printf("Si è verificato un'errore nella ricezione del messaggio dal server\n");
+                exit(EXIT_FAILURE);
+            }
 
-        // while (handle_quiz_selection() && handle_quiz_game())
-        //     ;
+            switch (received_msg->type)
+            {
+            case MSG_REQ_NICKNAME:
+                handle_nickname_selection(server_fd, received_msg);
+                break;
+            case MSG_OK_NICKNAME:
+                request_available_quizzes(server_fd);
+                break;
+            case MSG_RES_QUIZ_LIST:
+                handle_quiz_selection(server_fd, received_msg);
+                break;
+            case MSG_QUIZ_QUESTION:
+                handle_quiz_question(server_fd, received_msg);
+                break;
+            case MSG_QUIZ_RESULT:
+            case MSG_INFO:
+                handle_message(received_msg);
+                break;
+            case MSG_QUIZ_SELECTED:
+                handle_selected_quiz(received_msg);
+                break;
+            case MSG_RES_RANKING:
+                handle_rankings(received_msg);
+                break;
+            case MSG_ERROR:
+                handle_error(received_msg);
+                break;
 
+            default:
+                break;
+            }
+        }
+        free(received_msg);
         close(server_fd);
         printf("\n");
     }

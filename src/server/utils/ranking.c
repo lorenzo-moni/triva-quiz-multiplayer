@@ -123,3 +123,15 @@ void remove_ranking(RankingNode *node, Quiz *quiz)
 
     free(node);
 }
+
+void deallocate_ranking(RankingNode *head)
+{
+    RankingNode *current = head;
+    RankingNode *next;
+    while (current)
+    {
+        next = current->next_node;
+        free(current);
+        current = next;
+    }
+}

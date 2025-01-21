@@ -14,7 +14,7 @@
 
 int main()
 {
-    int server_fd, activity;
+    int activity;
     Context context;
     struct sockaddr_in server_address;
 
@@ -40,14 +40,14 @@ int main()
     FD_ZERO(&context.readfds);
 
     // Creazione del socket del server
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+    if ((context.server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
         perror("Socket fallita");
         exit(EXIT_FAILURE);
     }
 
     int opt = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    if (setsockopt(context.server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
     {
         perror("Errore nell'impostazione di SO_REUSEADDR");
         exit(EXIT_FAILURE);
@@ -60,7 +60,7 @@ int main()
     server_address.sin_port = htons(PORT);
 
     // Binding del socket
-    if (bind(server_fd, (struct sockaddr *)&server_address,
+    if (bind(context.server_fd, (struct sockaddr *)&server_address,
              sizeof(server_address)) < 0)
     {
         perror("Bind fallita");
@@ -68,7 +68,7 @@ int main()
     }
 
     // In ascolto
-    if (listen(server_fd, 10) < 0)
+    if (listen(context.server_fd, 10) < 0)
     {
         perror("Listen fallita");
         exit(EXIT_FAILURE);
@@ -76,9 +76,9 @@ int main()
 
     printf("DEBUG: Server in ascolto sulla porta %d...\n", PORT);
 
-    FD_SET(server_fd, &context.masterfds);
+    FD_SET(context.server_fd, &context.masterfds);
     FD_SET(STDIN_FILENO, &context.masterfds); // Aggiungi lo stdin per monitorare l'input
-    context.clientsInfo.max_fd = server_fd > STDIN_FILENO ? server_fd : STDERR_FILENO;
+    context.clientsInfo.max_fd = context.server_fd > STDIN_FILENO ? context.server_fd : STDERR_FILENO;
     Client *client;
 
     enable_raw_mode();
@@ -87,6 +87,8 @@ int main()
     while (1)
     {
         context.readfds = context.masterfds;
+
+        printf("context maxfd: %d\n", context.clientsInfo.max_fd);
 
         show_dashboard(&context);
 
@@ -108,8 +110,8 @@ int main()
                 break;
         }
 
-        if (FD_ISSET(server_fd, &context.readfds))
-            handle_new_client_connection(&context, server_fd);
+        if (FD_ISSET(context.server_fd, &context.readfds))
+            handle_new_client_connection(&context);
 
         client = context.clientsInfo.clients_head;
         while (client)
@@ -121,6 +123,10 @@ int main()
     }
     disable_raw_mode();
     printf("\nTerminazione del server\n");
-    close(server_fd);
+    close(context.server_fd);
+
+    deallocate_quizzes(&context.quizzesInfo);
+    deallocate_clients(&context.clientsInfo);
+
     return 0;
 }

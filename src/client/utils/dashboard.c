@@ -12,6 +12,12 @@ void show_menu()
     printf("La tua scelta: ");
 }
 
+void handle_selected_quiz(Message *msg)
+{
+    printf("\nQuiz - %s\n", msg->payload);
+    printf("+++++++++++++++++++++++++++");
+}
+
 void show_quiz_list(char **quizzes, int total_quizzes)
 {
     printf("\nQuiz disponibili\n");
@@ -30,7 +36,7 @@ void clear_input_buffer()
         ;
 }
 
-void get_console_input(char *buffer, int buffer_size, int *stop)
+void get_console_input(char *buffer, int buffer_size)
 {
     if (fgets(buffer, buffer_size, stdin))
     {
@@ -54,29 +60,5 @@ void get_console_input(char *buffer, int buffer_size, int *stop)
         printf("Errore durante la lettura dell'input\n");
     }
 
-    // Controlla la condizione di stop
-    if (stop != NULL && strcmp(buffer, "endquiz") == 0)
-    {
-        *stop = 1;
-        return;
-    }
     return;
-}
-
-bool initial_menu()
-{
-    int choice;
-    int ret;
-    do
-    {
-        show_menu();
-        ret = scanf("%d", &choice);
-        clear_input_buffer();
-
-        if ((choice != 1 && choice != 2) || ret != 1)
-            printf("\n Scelta invalida\n\n");
-        else if (choice == 2)
-            return false;
-    } while (choice != 1);
-    return true;
 }

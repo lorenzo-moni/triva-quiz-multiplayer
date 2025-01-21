@@ -182,5 +182,22 @@ int load_quizzes_from_directory(const char *directory_path, QuizzesInfo *quizzes
         i++;
     }
 
+    closedir(dir);
     return 0;
+}
+
+void deallocate_quizzes(QuizzesInfo *quizzesInfo)
+{
+    for (int i = 0; i < quizzesInfo->total_quizzes; i++)
+    {
+        Quiz *quiz = quizzesInfo->quizzes[i];
+        free(quiz->name);
+        deallocate_ranking(quiz->ranking_head);
+        for (int j = 0; j < quiz->total_questions; j++)
+        {
+            free(quiz->questions[j]->question);
+            for (int k = 0; k < quiz->questions[j]->total_answers; k++)
+                free(quiz->questions[j]->answers[k]);
+        }
+    }
 }

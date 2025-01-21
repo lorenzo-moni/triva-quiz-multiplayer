@@ -80,18 +80,21 @@ typedef struct Context
     QuizzesInfo quizzesInfo;
     fd_set readfds;
     fd_set masterfds;
+    int server_fd;
 
 } Context;
 
 // Client list
 
-void handle_new_client_connection(Context *context, int server_fd);
+void handle_new_client_connection(Context *context);
 void handle_client(Client *client, Context *context);
 void init_clients_info(ClientsInfo *clientsInfo);
+void deallocate_clients(ClientsInfo *clientsInfo);
 
 // Quiz
 
 int load_quizzes_from_directory(const char *directory_path, QuizzesInfo *quizzesInfo);
+void deallocate_quizzes(QuizzesInfo *quizzesInfo);
 
 // Dashboard
 
@@ -107,5 +110,6 @@ void list_rankings(Quiz *quiz);
 void list_completed_rankings(Quiz *quiz);
 void update_ranking(RankingNode *node, Quiz *quiz);
 void remove_ranking(RankingNode *node, Quiz *quiz);
+void deallocate_ranking(RankingNode *head);
 
 #endif // UTILS_H
