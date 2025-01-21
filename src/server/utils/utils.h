@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <string.h>
 #include "../constants.h"
+#include "../../common/common.h"
 
 #define MAX_PAYLOAD_SIZE 256
 
@@ -26,12 +27,15 @@ typedef struct Client
     ClientState state;
     struct RankingNode **client_rankings;
     int current_quiz_id;
+    struct Client *prev_node;
+    struct Client *next_node;
 
 } Client;
 
 typedef struct ClientsInfo
 {
-    Client clients[MAX_CLIENTS];
+    struct Client *clients_head;
+    struct Client *clients_tail;
     int connected_clients;
     int max_fd;
 
@@ -69,35 +73,21 @@ typedef struct RankingNode
     struct RankingNode *next_node;
 
 } RankingNode;
-typedef enum
-{
-    MSG_SET_NICKNAME,  // messaggio inviato dal client per settare il nickname
-    MSG_REQ_NICKNAME,  // messaggio inviato dal server per richiedere al client il nickaname
-    MSG_OK_NICKNAME,   // messaggio inviato dal server per indicare che il nickname scelto è corretto
-    MSG_REQ_QUIZ_LIST, // messaggio inviato dal client per richiedere la lista dei quiz
-    MSG_RES_QUIZ_LIST, // messaggio inviato dal server per rispondere alla richiesta del client
-    MSG_QUIZ_SELECT,   // messaggio inviato dal client per selezionare il quiz
-    MSG_QUIZ_QUESTION, // messaggio inviato dal server con la domanda
-    MSG_QUIZ_ANSWER,   // messaggio inviato dal client con la risposta alla domanda
-    MSG_QUIZ_RESULT,   // messaggio inviato dal server con il risultato della risposta
-    MSG_ERROR,         // messaggio inviato dal server o dal client per indicare che si è verificato un errore
-    MSG_INFO,          // messaggio inviato dal server con un messaggio informativo per il client
-    MSG_REQ_RANKING,   // messaggio inviato dal client al server per richiedere la classifica
-    MSG_RES_RANKING    // messaggio inviato dal server al client per la classifica
-} MessageType;
 
-typedef struct
+typedef struct Context
 {
-    MessageType type;
-    int payload_length;
-    char payload[MAX_PAYLOAD_SIZE];
-} Message;
+    ClientsInfo clientsInfo;
+    QuizzesInfo quizzesInfo;
+    fd_set readfds;
+    fd_set masterfds;
+
+} Context;
 
 // Client list
 
-void handle_new_client_connection(ClientsInfo *clientsInfo, fd_set *master, int server_fd);
-void handle_client(Client *client, ClientsInfo *clientsInfo, QuizzesInfo *quizzesInfo, fd_set *master);
-void init_clients_info(ClientsInfo *clientsInfo, QuizzesInfo *quizzesInfo);
+void handle_new_client_connection(Context *context, int server_fd);
+void handle_client(Client *client, Context *context);
+void init_clients_info(ClientsInfo *clientsInfo);
 
 // Quiz
 
@@ -105,7 +95,9 @@ int load_quizzes_from_directory(const char *directory_path, QuizzesInfo *quizzes
 
 // Dashboard
 
-void show_dashboard(QuizzesInfo *quizzesInfo, ClientsInfo *clientsInfo, int score);
+void show_dashboard(Context *context);
+void enable_raw_mode();
+void disable_raw_mode();
 
 // Ranking
 

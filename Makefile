@@ -1,52 +1,55 @@
 # Variabili configurabili
 CC = gcc
+CFLAGS = -Wall -Wextra -I$(SRC_DIR)/common -I$(SRC_DIR)/client/utils -I$(SRC_DIR)/server -I$(SRC_DIR)/utils
 
-INCDIRS = src/client src/server src/client/utils src/server/utils
-CFLAGS = -Wall -Wextra $(addprefix -I, $(INCDIRS))
-
-# Directories
-SRC_DIR_CLIENT = src/client
-SRC_DIR_SERVER = src/server
-BUILD_DIR_CLIENT = build/client
-BUILD_DIR_SERVER = build/server
+# Directory
+SRC_DIR = src
 BUILD_DIR = build
+CLIENT_BUILD_DIR = $(BUILD_DIR)/client
+SERVER_BUILD_DIR = $(BUILD_DIR)/server
 
-# Output files
+# Eseguibili
 CLIENT_EXEC = client
 SERVER_EXEC = server
 
-# Source and object files for client
-CLIENT_SRC = $(shell find $(SRC_DIR_CLIENT) -name '*.c')
-CLIENT_OBJ = $(CLIENT_SRC:$(SRC_DIR_CLIENT)/%.c=$(BUILD_DIR_CLIENT)/%.o)
+# Sorgenti e oggetti per il client
+CLIENT_SRC = $(SRC_DIR)/client/client.c \
+             $(SRC_DIR)/client/utils/connection.c \
+             $(SRC_DIR)/client/utils/dashboard.c \
+             $(SRC_DIR)/common/common.c
 
-# Source and object files for server
-SERVER_SRC = $(shell find $(SRC_DIR_SERVER) -name '*.c')
-SERVER_OBJ = $(SERVER_SRC:$(SRC_DIR_SERVER)/%.c=$(BUILD_DIR_SERVER)/%.o)
+CLIENT_OBJ = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(CLIENT_SRC))
 
-# Default target
+# Sorgenti e oggetti per il server
+SERVER_SRC = $(SRC_DIR)/server/server.c \
+             $(SRC_DIR)/server/utils/dashboard.c \
+             $(SRC_DIR)/server/utils/handle_clients.c \
+			 $(SRC_DIR)/server/utils/load_quizzes.c \
+			 $(SRC_DIR)/server/utils/ranking.c \
+			 $(SRC_DIR)/common/common.c
+
+SERVER_OBJ = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SERVER_SRC))
+
+
+# Target di default
 all: $(CLIENT_EXEC) $(SERVER_EXEC)
 
-# Rule to build the client executable
+# Regola per compilare l'eseguibile del client
 $(CLIENT_EXEC): $(CLIENT_OBJ)
 	$(CC) $(CFLAGS) $(CLIENT_OBJ) -o $@
 
-# Rule to build the server executable
+# Regola per compilare l'eseguibile del server
 $(SERVER_EXEC): $(SERVER_OBJ)
 	$(CC) $(CFLAGS) $(SERVER_OBJ) -o $@
 
-# Rule to compile client object files
-$(BUILD_DIR_CLIENT)/%.o: $(SRC_DIR_CLIENT)/%.c
+# Regola generica per compilare i file oggetto
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Rule to compile server object files
-$(BUILD_DIR_SERVER)/%.o: $(SRC_DIR_SERVER)/%.c
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Clean build files
+# Pulizia
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) $(CLIENT_EXEC) $(SERVER_EXEC)
 
-# Phony targets
-.PHONY: all clean
+# Target fittizi
+.PHONY: all clean client server

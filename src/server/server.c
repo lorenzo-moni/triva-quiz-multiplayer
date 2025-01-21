@@ -15,14 +15,11 @@
 int main()
 {
     int server_fd, activity;
-    ClientsInfo clientsInfo;
-    QuizzesInfo quizzesInfo;
+    Context context;
     struct sockaddr_in server_address;
 
-    fd_set readfds, master; // Set di file descriptor per la `select()`
-
-    load_quizzes_from_directory("./quizzes", &quizzesInfo);
-    init_clients_info(&clientsInfo, &quizzesInfo);
+    load_quizzes_from_directory("./quizzes", &context.quizzesInfo);
+    init_clients_info(&context.clientsInfo);
 
     // for (int i = 0; i < quizzesInfo.total_quizzes; i++)
     // {
@@ -39,8 +36,8 @@ int main()
     //     printf("\n");
     // }
 
-    FD_ZERO(&master);
-    FD_ZERO(&readfds);
+    FD_ZERO(&context.masterfds);
+    FD_ZERO(&context.readfds);
 
     // Creazione del socket del server
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -79,39 +76,51 @@ int main()
 
     printf("DEBUG: Server in ascolto sulla porta %d...\n", PORT);
 
-    FD_SET(server_fd, &master);
-    clientsInfo.max_fd = server_fd;
-    Client *clients;
-    int score = 0;
+    FD_SET(server_fd, &context.masterfds);
+    FD_SET(STDIN_FILENO, &context.masterfds); // Aggiungi lo stdin per monitorare l'input
+    context.clientsInfo.max_fd = server_fd > STDIN_FILENO ? server_fd : STDERR_FILENO;
+    Client *client;
+
+    enable_raw_mode();
 
     // Ciclo principale del server
     while (1)
     {
-        readfds = master;
+        context.readfds = context.masterfds;
 
-        show_dashboard(&quizzesInfo, &clientsInfo, score);
+        show_dashboard(&context);
 
         // Aspetta eventi con `select()`
-        activity = select(clientsInfo.max_fd + 1, &readfds, NULL, NULL, NULL);
-        score = 1;
+        activity = select(context.clientsInfo.max_fd + 1, &context.readfds, NULL, NULL, NULL);
 
         if ((activity < 0) && (errno != EINTR))
         {
             perror("Select fallita");
+            disable_raw_mode();
             exit(EXIT_FAILURE);
         }
 
-        if (FD_ISSET(server_fd, &readfds))
-            handle_new_client_connection(&clientsInfo, &master, server_fd);
-
-        clients = clientsInfo.clients;
-        for (int i = 0; i < MAX_CLIENTS; i++)
+        if (FD_ISSET(STDIN_FILENO, &context.readfds))
         {
-            if (clients[i].socket_fd != -1 &&
-                FD_ISSET(clients[i].socket_fd, &readfds))
-                handle_client(&clients[i], &clientsInfo, &quizzesInfo, &master);
+            char input;
+            read(STDIN_FILENO, &input, 1);
+            if (input == 'q')
+                break;
+        }
+
+        if (FD_ISSET(server_fd, &context.readfds))
+            handle_new_client_connection(&context, server_fd);
+
+        client = context.clientsInfo.clients_head;
+        while (client)
+        {
+            if (FD_ISSET(client->socket_fd, &context.readfds))
+                handle_client(client, &context);
+            client = client->next_node;
         }
     }
-
+    disable_raw_mode();
+    printf("\nTerminazione del server\n");
+    close(server_fd);
     return 0;
 }

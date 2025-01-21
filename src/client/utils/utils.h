@@ -7,48 +7,24 @@
 #include <stdio.h>
 #include <limits.h>
 #include <string.h>
+#include "../../common/common.h"
+#include "stdbool.h"
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
-#define MAX_PAYLOAD_SIZE 256
-
-typedef enum
-{
-    MSG_SET_NICKNAME,  // messaggio inviato dal client per settare il nickname
-    MSG_REQ_NICKNAME,  // messaggio inviato dal server per richiedere al client il nickaname
-    MSG_OK_NICKNAME,   // messaggio inviato dal server per indicare che il nickname scelto è corretto
-    MSG_REQ_QUIZ_LIST, // messaggio inviato dal client per richiedere la lista dei quiz
-    MSG_RES_QUIZ_LIST, // messaggio inviato dal server per rispondere alla richiesta del client
-    MSG_QUIZ_SELECT,   // messaggio inviato dal client per selezionare il quiz
-    MSG_QUIZ_QUESTION, // messaggio inviato dal server con la domanda
-    MSG_QUIZ_ANSWER,   // messaggio inviato dal client con la risposta alla domanda
-    MSG_QUIZ_RESULT,   // messaggio inviato dal server con il risultato della risposta
-    MSG_ERROR,         // messaggio inviato dal server o dal client per indicare che si è verificato un errore
-    MSG_INFO,          // messaggio inviato dal server con un messaggio informativo per il client
-    MSG_REQ_RANKING,   // messaggio inviato dal client al server per richiedere la classifica
-    MSG_RES_RANKING    // messaggio inviato dal server al client per la classifica
-} MessageType;
-
-typedef struct
-{
-    MessageType type;
-    int payload_length;
-    char payload[MAX_PAYLOAD_SIZE];
-} Message;
 
 void show_menu();
 void show_quiz_list(char **quizzes, int total_quizzes);
 
-int receive_msg(int client_fd, Message *msg);
-
-void handle_nickname_selection(int server_fd, Message *msg);
-void handle_quiz_selection(int server_fd, Message *msg, int *stop);
-void request_available_quizzes(int server_fd);
-void deserialize_quiz_list(Message *msg, char ***quizzes, int *total_quizzes);
-void handle_error(Message *msg);
-void handle_message(Message *msg);
-void handle_quiz_question(int server_fd, Message *msg, int *stop);
+void handle_nickname_selection(int server_fd);
+// void handle_quiz_selection(int server_fd, Message *msg, int *stop);
+// void request_available_quizzes(int server_fd);
+// void deserialize_quiz_list(Message *msg, char ***quizzes, int *total_quizzes);
+// void handle_error(Message *msg);
+// void handle_message(Message *msg);
+// void handle_quiz_question(int server_fd, Message *msg, int *stop);
 void get_console_input(char *buffer, int buffer_size, int *stop);
 void clear_input_buffer();
+bool initial_menu();
 
 #endif // UTILS_H

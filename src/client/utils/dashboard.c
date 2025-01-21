@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "stdbool.h"
 
 void show_menu()
 {
@@ -37,12 +38,20 @@ void get_console_input(char *buffer, int buffer_size, int *stop)
         if (buffer[len] == '\n')
             buffer[len] = '\0'; // Sostituisci '\n' con il terminatore di stringa
         else
+        {
             clear_input_buffer();
+            printf("Errore: il valore inserito supera la lunghezza massima di %d caratteri \n", buffer_size);
+            return;
+        }
+        if (len == 0)
+        {
+            printf("errore: il valore inserito è vuoto\n");
+            return;
+        }
     }
     else
     {
-        // Errore nella lettura
-        buffer[0] = '\0';
+        printf("Errore durante la lettura dell'input\n");
     }
 
     // Controlla la condizione di stop
@@ -52,4 +61,22 @@ void get_console_input(char *buffer, int buffer_size, int *stop)
         return;
     }
     return;
+}
+
+bool initial_menu()
+{
+    int choice;
+    int ret;
+    do
+    {
+        show_menu();
+        ret = scanf("%d", &choice);
+        clear_input_buffer();
+
+        if ((choice != 1 && choice != 2) || ret != 1)
+            printf("\n Scelta invalida\n\n");
+        else if (choice == 2)
+            return false;
+    } while (choice != 1);
+    return true;
 }

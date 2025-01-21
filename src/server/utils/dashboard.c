@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <termios.h>
 #include "utils.h"
 
 void show_quiz_names(QuizzesInfo *quizzesInfo)
@@ -13,9 +13,13 @@ void show_quiz_names(QuizzesInfo *quizzesInfo)
 void show_clients(ClientsInfo *clientsInfo)
 {
   printf("\nPartecipanti (%d)\n", clientsInfo->connected_clients);
-  for (int i = 0; i <= clientsInfo->max_fd; i++)
-    if (clientsInfo->clients[i].socket_fd != -1 && clientsInfo->clients[i].nickname)
-      printf("- %s\n", clientsInfo->clients[i].nickname);
+  Client *current_client = clientsInfo->clients_head;
+  while (current_client)
+  {
+    if (current_client->state != LOGIN)
+      printf("- %s\n", current_client->nickname);
+    current_client = current_client->next_node;
+  }
 }
 
 void show_scores(QuizzesInfo *quizzesInfo)
@@ -36,15 +40,35 @@ void show_completed_quizes(QuizzesInfo *quizzesInfo)
   }
 }
 
-void show_dashboard(QuizzesInfo *quizzesInfo, ClientsInfo *clientsInfo, int score)
+void enable_raw_mode()
 {
+  struct termios term;
+  tcgetattr(STDIN_FILENO, &term);          // Ottieni le impostazioni correnti
+  term.c_lflag &= ~(ICANON | ECHO);        // Disabilita modalità canonica ed echo
+  tcsetattr(STDIN_FILENO, TCSANOW, &term); // Applica le modifiche
+}
+
+void disable_raw_mode()
+{
+  struct termios term;
+  tcgetattr(STDIN_FILENO, &term);          // Ottieni le impostazioni correnti
+  term.c_lflag |= (ICANON | ECHO);         // Ripristina modalità canonica ed echo
+  tcsetattr(STDIN_FILENO, TCSANOW, &term); // Applica le modifiche
+}
+
+void show_dashboard(Context *context)
+{
+
+  // system("clear"); // Pulisco lo schermo
+  // fflush(stdout);  // Svuoto il buffer di output
+
   printf("Trivia Quiz\n");
   printf("+++++++++++++++++++++++++++\n");
-  show_quiz_names(quizzesInfo);
+  show_quiz_names(&context->quizzesInfo);
   printf("+++++++++++++++++++++++++++\n");
-  if (!score)
-    return;
-  show_clients(clientsInfo);
-  show_scores(quizzesInfo);
-  show_completed_quizes(quizzesInfo);
+  show_clients(&context->clientsInfo);
+  show_scores(&context->quizzesInfo);
+  show_completed_quizes(&context->quizzesInfo);
+
+  printf("\nPremere 'q' per terminare il server: \n");
 }
