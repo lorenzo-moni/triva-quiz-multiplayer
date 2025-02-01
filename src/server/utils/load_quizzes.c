@@ -10,7 +10,7 @@ int get_directory_total_files(DIR *directory)
 {
     if (!directory)
     {
-        printf("Not valid directory");
+        printf("La directory selezionata non è valida\n");
         return -1;
     }
     int file_count = 0;

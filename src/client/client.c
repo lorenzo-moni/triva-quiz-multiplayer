@@ -1,16 +1,26 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <arpa/inet.h>
+#include "arpa/inet.h"
 #include <stdlib.h>
 #include "utils/utils.h"
+#include "signal.h"
 #include "../common/common.h"
 
-int main()
+int main(int argc, const char **argv)
 {
+
+    if (argc != 2)
+    {
+        printf("Uso: %s <porta>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
     int server_fd;
     struct sockaddr_in server_address;
     int choice;
+
+    signal(SIGPIPE, SIG_IGN);
 
     while (1)
     {
@@ -35,7 +45,7 @@ int main()
         }
 
         server_address.sin_family = AF_INET;
-        server_address.sin_port = htons(PORT);
+        server_address.sin_port = htons(atoi(argv[1]));
 
         // Converte l'indirizzo IP
         if (inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr) <= 0)
@@ -47,10 +57,11 @@ int main()
         // Connessione al server
         if (connect(server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
         {
-            printf("Connessione fallita\n");
-            exit(EXIT_FAILURE);
+            printf("Connessione fallita\n\n");
+            continue;
         }
         Message *received_msg = (Message *)malloc(sizeof(Message));
+
         int ret;
 
         while (1)
@@ -82,7 +93,6 @@ int main()
             case MSG_QUIZ_QUESTION:
                 handle_quiz_question(server_fd, received_msg);
                 break;
-            case MSG_QUIZ_RESULT:
             case MSG_INFO:
                 handle_message(received_msg);
                 break;
@@ -100,7 +110,6 @@ int main()
                 break;
             }
         }
-        free(received_msg);
         close(server_fd);
         printf("\n");
     }

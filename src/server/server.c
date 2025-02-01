@@ -6,9 +6,8 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
-#include "constants.h"
 #include "utils/utils.h"
+#include "signal.h"
 
 #define PORT 8080
 
@@ -20,6 +19,7 @@ int main()
 
     load_quizzes_from_directory("./quizzes", &context.quizzesInfo);
     init_clients_info(&context.clientsInfo);
+    signal(SIGPIPE, SIG_IGN);
 
     // for (int i = 0; i < quizzesInfo.total_quizzes; i++)
     // {
@@ -87,8 +87,6 @@ int main()
     while (1)
     {
         context.readfds = context.masterfds;
-
-        printf("context maxfd: %d\n", context.clientsInfo.max_fd);
 
         show_dashboard(&context);
 

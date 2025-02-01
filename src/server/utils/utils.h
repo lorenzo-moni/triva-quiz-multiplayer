@@ -7,12 +7,9 @@
 #include <dirent.h>
 #include <limits.h>
 #include <string.h>
-#include "../constants.h"
 #include "../../common/common.h"
 
-#define MAX_PAYLOAD_SIZE 256
-
-typedef enum
+typedef enum ClientState
 {
     LOGIN,
     LOGGED_IN,

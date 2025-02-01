@@ -7,7 +7,7 @@
 
 void handle_nickname_selection(int server_fd, Message *msg)
 {
-    char nickname[MAX_PAYLOAD_SIZE];
+    char nickname[DEFAULT_PAYLOAD_SIZE];
     printf("%s", msg->payload);
 
     get_console_input(nickname, sizeof(nickname));
@@ -22,82 +22,82 @@ void request_available_quizzes(int server_fd)
     send_msg(server_fd, msg);
 }
 
-void deserialize_quiz_list(Message *msg, char ***quizzes, int *total_quizzes)
+void display_quiz_list(Message *msg)
 {
 
     char *pointer = msg->payload;
-    uint32_t net_strings_num, net_string_len, string_len;
+    int string_len, total_quizzes;
+    uint32_t net_strings_num, net_string_len;
     memcpy(&net_strings_num, pointer, sizeof(uint32_t));
     pointer += sizeof(uint32_t);
-    *total_quizzes = ntohl(net_strings_num);
+    total_quizzes = ntohl(net_strings_num);
 
-    *quizzes = malloc(*total_quizzes * sizeof(char *));
+    printf("\nQuiz disponibili\n");
+    printf("+++++++++++++++++++++++++++\n");
 
-    for (int i = 0; i < *total_quizzes; i++)
+    for (int i = 0; i < total_quizzes; i++)
     {
         memcpy(&net_string_len, pointer, sizeof(uint32_t));
         string_len = ntohl(net_string_len);
         pointer += sizeof(uint32_t);
 
-        (*quizzes)[i] = malloc(string_len + 1);
-        memcpy((*quizzes)[i], pointer, string_len);
-        (*quizzes)[i][string_len] = '\0';
+        printf("%d - %.*s\n", i + 1, string_len, pointer);
+
         pointer += string_len;
     }
-}
 
-void deserialize_rankings(Message *msg, char ***quizzes, int *total_quizzes)
-{
-
-    char *pointer = msg->payload;
-    uint32_t net_strings_num, net_string_len, string_len;
-    memcpy(&net_strings_num, pointer, sizeof(uint32_t));
-    pointer += sizeof(uint32_t);
-    *total_quizzes = ntohl(net_strings_num);
-
-    *quizzes = malloc(*total_quizzes * sizeof(char *));
-
-    for (int i = 0; i < *total_quizzes; i++)
-    {
-        memcpy(&net_string_len, pointer, sizeof(uint32_t));
-        string_len = ntohl(net_string_len);
-        pointer += sizeof(uint32_t);
-
-        (*quizzes)[i] = malloc(string_len + 1);
-        memcpy((*quizzes)[i], pointer, string_len);
-        (*quizzes)[i][string_len] = '\0';
-        pointer += string_len;
-    }
+    printf("+++++++++++++++++++++++++++\n");
 }
 
 void handle_rankings(Message *msg)
 {
 
     char *pointer = msg->payload;
-    uint32_t net_string_len, net_client_score, net_client_per_quiz_counter;
+    int clients_per_quiz, quizzes_num, client_score, string_len;
+    uint32_t net_string_len, net_client_score, net_clients_per_quiz, net_quizzes_num;
+
+    memcpy(&net_quizzes_num, pointer, sizeof(uint32_t));
+    quizzes_num = ntohl(net_quizzes_num);
+    pointer += sizeof(uint32_t);
+
+    for (int i = 0; i < quizzes_num; i++)
+    {
+        memcpy(&net_clients_per_quiz, pointer, sizeof(uint32_t));
+        clients_per_quiz = ntohl(net_clients_per_quiz);
+        pointer += sizeof(uint32_t);
+        printf("\nPunteggio Tema %d\n", i + 1);
+        for (int j = 0; j < clients_per_quiz; j++)
+        {
+            memcpy(&net_string_len, pointer, sizeof(uint32_t));
+            string_len = ntohl(net_string_len);
+            pointer += sizeof(uint32_t);
+
+            memcpy(&net_client_score, pointer + string_len, sizeof(uint32_t));
+            client_score = ntohl(net_client_score);
+            printf("- %.*s %d\n", string_len, pointer, client_score);
+            pointer += string_len + sizeof(uint32_t);
+        }
+    }
 }
 
 void handle_quiz_selection(int server_fd, Message *msg)
 {
-    char **quizzes_name;
-    int total_quizzes;
-    deserialize_quiz_list(msg, &quizzes_name, &total_quizzes);
-    show_quiz_list(quizzes_name, total_quizzes);
 
-    char answer[MAX_PAYLOAD_SIZE];
+    display_quiz_list(msg);
+
+    char answer[DEFAULT_PAYLOAD_SIZE];
     printf("La tua scelta: ");
     get_console_input(answer, sizeof(answer));
 
-    MessageType msg_type;
+    Message *reply_msg;
 
     if (strcmp(answer, ENDQUIZ) == 0)
-        msg_type = MSG_DISCONNECT;
+        reply_msg = create_msg(MSG_DISCONNECT, "", 0);
     else if (strcmp(answer, SHOWSCORE) == 0)
-        msg_type = MSG_REQ_RANKING;
+        reply_msg = create_msg(MSG_REQ_RANKING, "", 0);
     else
-        msg_type = MSG_QUIZ_SELECT;
+        reply_msg = create_msg(MSG_QUIZ_SELECT, answer, strlen(answer));
 
-    Message *reply_msg = create_msg(msg_type, answer, strlen(answer));
     send_msg(server_fd, reply_msg);
 }
 
@@ -112,20 +112,19 @@ void handle_message(Message *msg)
 
 void handle_quiz_question(int server_fd, Message *msg)
 {
-    char answer[MAX_PAYLOAD_SIZE];
+    char answer[DEFAULT_PAYLOAD_SIZE];
     printf("\n%s", msg->payload);
     printf("\nRisposta: ");
     get_console_input(answer, sizeof(answer));
 
-    MessageType msg_type;
+    Message *reply_msg;
 
     if (strcmp(answer, ENDQUIZ) == 0)
-        msg_type = MSG_DISCONNECT;
+        reply_msg = create_msg(MSG_DISCONNECT, "", 0);
     else if (strcmp(answer, SHOWSCORE) == 0)
-        msg_type = MSG_REQ_RANKING;
+        reply_msg = create_msg(MSG_REQ_RANKING, "", 0);
     else
-        msg_type = MSG_QUIZ_ANSWER;
+        reply_msg = create_msg(MSG_QUIZ_ANSWER, answer, strlen(answer));
 
-    Message *answer_msg = create_msg(msg_type, answer, strlen(answer));
-    send_msg(server_fd, answer_msg);
+    send_msg(server_fd, reply_msg);
 }

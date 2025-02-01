@@ -1,12 +1,15 @@
 # Variabili configurabili
 CC = gcc
-CFLAGS = -Wall -Wextra -I$(SRC_DIR)/common -I$(SRC_DIR)/client/utils -I$(SRC_DIR)/server -I$(SRC_DIR)/utils
+CFLAGS = -Wall -Wextra -I$(SRC_DIR)/common -I$(SRC_DIR)/client/utils -I$(SRC_DIR)/server/utils
+
+
 
 # Directory
 SRC_DIR = src
 BUILD_DIR = build
 CLIENT_BUILD_DIR = $(BUILD_DIR)/client
 SERVER_BUILD_DIR = $(BUILD_DIR)/server
+
 
 # Eseguibili
 CLIENT_EXEC = client

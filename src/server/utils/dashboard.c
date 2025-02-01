@@ -16,7 +16,7 @@ void show_clients(ClientsInfo *clientsInfo)
   Client *current_client = clientsInfo->clients_head;
   while (current_client)
   {
-    if (current_client->state != LOGIN)
+    if (current_client->nickname)
       printf("- %s\n", current_client->nickname);
     current_client = current_client->next_node;
   }

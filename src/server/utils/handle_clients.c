@@ -2,7 +2,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include "../../common/common.h"
-#include "../constants.h"
 #include "utils.h"
 #include <sys/select.h>
 
@@ -19,6 +18,7 @@ void init_clients_info(ClientsInfo *clientsInfo)
 Client *create_client_node(int client_fd, QuizzesInfo *quizzesInfo)
 {
     Client *new_client = (Client *)malloc(sizeof(Client));
+    handle_malloc_error(new_client, "Errore nell'allocazione della memoria per il nuovo client");
     new_client->client_rankings = NULL;
     new_client->nickname = NULL;
     new_client->next_node = new_client->prev_node = NULL;
@@ -26,6 +26,7 @@ Client *create_client_node(int client_fd, QuizzesInfo *quizzesInfo)
     new_client->socket_fd = client_fd;
     new_client->state = LOGIN;
     new_client->client_rankings = malloc(quizzesInfo->total_quizzes * sizeof(RankingNode *));
+    handle_malloc_error(new_client->client_rankings, "Errore nell'allocazione della memoria per i ranking del nuovo client");
     memset(new_client->client_rankings, 0, quizzesInfo->total_quizzes * sizeof(RankingNode *));
     return new_client;
 }
@@ -46,25 +47,26 @@ void add_client(Client *node, ClientsInfo *clientsInfo)
     clientsInfo->clients_tail = node;
 }
 
-void remove_client(Client *node, ClientsInfo *clientsInfo)
+void remove_client(Client **node, ClientsInfo *clientsInfo)
 {
-    if (node == NULL)
+    if (node == NULL || *node == NULL)
         return;
     if (clientsInfo->clients_head == NULL)
         return;
 
-    if (clientsInfo->clients_head == node)
-        clientsInfo->clients_head = node->next_node;
+    if (clientsInfo->clients_head == *node)
+        clientsInfo->clients_head = (*node)->next_node;
 
-    if (node->prev_node != NULL)
-        node->prev_node->next_node = node->next_node;
+    if ((*node)->prev_node != NULL)
+        (*node)->prev_node->next_node = (*node)->next_node;
 
-    if (node->next_node != NULL)
-        node->next_node->prev_node = node->prev_node;
+    if ((*node)->next_node != NULL)
+        (*node)->next_node->prev_node = (*node)->prev_node;
 
-    free(node->nickname);
-    free(node->client_rankings);
-    free(node);
+    free((*node)->nickname);
+    free((*node)->client_rankings);
+    free((*node));
+    *node = NULL;
 }
 
 void deallocate_clients(ClientsInfo *clientsInfo)
@@ -108,7 +110,10 @@ void handle_new_client_connection(Context *context)
 void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 {
     // gestiamo la serializzazione della lista di quiz
-    char payload[MAX_PAYLOAD_SIZE];
+    size_t buffer_size = DEFAULT_PAYLOAD_SIZE;
+    char *payload = (char *)malloc(buffer_size);
+    handle_malloc_error(payload, "Errore nell'allocazione del payload");
+
     char *pointer = payload;
     size_t string_len;
     uint32_t net_string_len;
@@ -117,14 +122,31 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
     memcpy(pointer, &net_strings_num, sizeof(uint32_t));
     pointer += sizeof(uint32_t);
 
+    Quiz *quiz;
+
     for (int i = 0; i < quizzesInfo->total_quizzes; i++)
     {
-        string_len = strlen(quizzesInfo->quizzes[i]->name);
+        quiz = quizzesInfo->quizzes[i];
+        string_len = strlen(quiz->name);
         net_string_len = htonl(string_len);
+
+        // gestisco la situazione in cui il buffer payload precedentemente allocato
+        // non è abbastanza capiente
+        if (pointer + sizeof(uint32_t) + string_len > payload + buffer_size)
+        {
+            size_t new_size = buffer_size * 2;
+            char *new_payload = (char *)realloc(payload, new_size);
+            handle_malloc_error(new_payload, "Errore nelle riallocazine di payload");
+
+            pointer = new_payload + (pointer - payload);
+            payload = new_payload;
+            buffer_size = new_size;
+        }
+
         memcpy(pointer, &net_string_len, sizeof(uint32_t));
         pointer += sizeof(uint32_t);
 
-        memcpy(pointer, quizzesInfo->quizzes[i]->name, string_len);
+        memcpy(pointer, quiz->name, string_len);
         pointer += string_len;
     }
 
@@ -146,7 +168,7 @@ void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *
     Client *current_client = clientsInfo->clients_head;
     while (current_client != NULL)
     {
-        if (current_client->state != LOGIN && strcmp(selected_nickname, current_client->nickname) == 0)
+        if (current_client->nickname && strcmp(selected_nickname, current_client->nickname) == 0)
         {
             found = 1;
             break;
@@ -155,7 +177,7 @@ void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *
     }
     if (found)
     {
-        char *message = "Nickname non valido";
+        char *message = "Nickname già in uso";
         Message *error_msg = create_msg(MSG_ERROR, message, strlen(message));
         send_msg(client->socket_fd, error_msg);
         request_client_nickname(client->socket_fd);
@@ -164,6 +186,7 @@ void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *
     client->state = LOGGED_IN;
     clientsInfo->connected_clients += 1;
     client->nickname = malloc(strlen(selected_nickname) + 1);
+    handle_malloc_error(client->nickname, "Errore nell'allocazione della memoria per il nickname del client");
     strcpy(client->nickname, selected_nickname);
 
     Message *msg = create_msg(MSG_OK_NICKNAME, "", 0);
@@ -194,7 +217,7 @@ void handle_client_disconnection(Client *client, Context *context)
         }
     }
 
-    remove_client(client, &context->clientsInfo);
+    remove_client(&client, &context->clientsInfo);
     context->clientsInfo.connected_clients--;
 }
 
@@ -242,7 +265,7 @@ void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
         payload = "Risposta errata";
     }
 
-    result_msg = create_msg(MSG_QUIZ_RESULT, payload, strlen(payload));
+    result_msg = create_msg(MSG_INFO, payload, strlen(payload));
     send_msg(client->socket_fd, result_msg);
 
     current_ranking->current_question += 1;
@@ -309,12 +332,17 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
 
 void handle_ranking_request(Client *client, QuizzesInfo *quizzesInfo)
 {
-    char payload[MAX_PAYLOAD_SIZE];
+    size_t buffer_size = DEFAULT_PAYLOAD_SIZE;
+    char *payload = (char *)malloc(buffer_size);
+    handle_malloc_error(payload, "Errore nell'allocazione del payload");
+
+    // [numero quizzes] [[numero utenti partecipanti al quiz] [[lunghezza nome] [nome] [score]]]
 
     char *pointer = payload;
+    int clients_per_quiz;
     size_t string_len;
-    uint32_t net_string_len, net_client_score, net_client_per_quiz_counter;
-    char *quiz_total_players_pointer;
+    uint32_t net_string_len, net_client_score, net_clients_per_quiz;
+    char *quiz_total_clients_pointer;
 
     // inserisco il numero totale di quizzes per cui dobbiamo stampare la classifica
     uint32_t net_quizzes_num = htonl(quizzesInfo->total_quizzes);
@@ -326,32 +354,58 @@ void handle_ranking_request(Client *client, QuizzesInfo *quizzesInfo)
     for (int i = 0; i < quizzesInfo->total_quizzes; i++)
     {
         Quiz *quiz = quizzesInfo->quizzes[i];
-        quiz_total_players_pointer = pointer;
+        // memorizzo la posizione dove andare ad inserire al termine del conteggio il numero totale
+        // di utenti che sono in classifica per il quiz corrente
+        quiz_total_clients_pointer = pointer;
         pointer += sizeof(uint32_t);
-        net_client_per_quiz_counter = 0;
+
+        clients_per_quiz = 0;
         RankingNode *current = quiz->ranking_head;
         while (current)
         {
-            net_client_per_quiz_counter += 1;
+            clients_per_quiz += 1;
             string_len = strlen(current->client->nickname);
             net_string_len = htonl(string_len);
+
+            // gestisco la situazine in cui il buffer allocato non è abbastanza grande da contenere
+            // le informazioni
+            if (pointer + sizeof(uint32_t) + string_len + sizeof(uint32_t) > payload + buffer_size)
+            {
+                size_t new_size = buffer_size * 2;
+                char *new_payload = (char *)realloc(payload, new_size);
+                handle_malloc_error(new_payload, "Errore nella riallocazione della memoria per il payload");
+
+                pointer = new_payload + (pointer - payload);
+                payload = new_payload;
+                buffer_size = new_size;
+            }
+
+            // inserisco la lunghezza del nickname del client corrent
             memcpy(pointer, &net_string_len, sizeof(uint32_t));
             pointer += sizeof(uint32_t);
 
+            // inserisco il client nickname corrente
             memcpy(pointer, current->client->nickname, string_len);
             pointer += string_len;
 
+            // inserisco lo score del client corrente
             net_client_score = htonl(current->score);
             memcpy(pointer, &net_client_score, sizeof(uint32_t));
+            pointer += sizeof(uint32_t);
+            current = current->next_node;
         }
-        net_client_per_quiz_counter = htonl(net_client_per_quiz_counter);
-        memcpy(quiz_total_players_pointer, &net_client_per_quiz_counter, sizeof(uint32_t));
+        // a questo punto inserisco il numero totale di client in classifica per il quiz corrente
+        // nella posizione del buffer salvata precedentemente
+        net_clients_per_quiz = htonl(clients_per_quiz);
+        memcpy(quiz_total_clients_pointer, &net_clients_per_quiz, sizeof(uint32_t));
     }
 
     int payload_size = pointer - payload;
 
     Message *reply_msg = create_msg(MSG_RES_RANKING, payload, payload_size);
     send_msg(client->socket_fd, reply_msg);
+
+    free(payload);
 
     switch (client->state)
     {
@@ -360,6 +414,7 @@ void handle_ranking_request(Client *client, QuizzesInfo *quizzesInfo)
         break;
     case SELECTING_QUIZ:
         send_quiz_list(client, quizzesInfo);
+        break;
     default:
         break;
     }
@@ -371,32 +426,39 @@ void handle_client(Client *client, Context *context)
     int res = receive_msg(client->socket_fd, received_msg);
     if (res == 0)
     {
-        printf("Il client ha chiuso la connessione\n");
+        printf("Il client ha chiuso la connessione in modo brusco\n");
         handle_client_disconnection(client, context);
-        free(received_msg);
         return;
     }
     else if (res == -1)
     {
         printf("Si è verificato un errore durante la ricezione di un messaggio\n");
-        free(received_msg);
-        return;
+        exit(EXIT_FAILURE);
     }
 
-    if (client->state == LOGIN && received_msg->type == MSG_SET_NICKNAME)
+    switch (received_msg->type)
+    {
+    case MSG_SET_NICKNAME:
         handle_client_nickname(client, received_msg, &context->clientsInfo);
-    else if (received_msg->type == MSG_REQ_QUIZ_LIST && client->state == LOGGED_IN)
+        break;
+    case MSG_REQ_QUIZ_LIST:
         send_quiz_list(client, &context->quizzesInfo);
-    else if (received_msg->type == MSG_QUIZ_SELECT && client->state == SELECTING_QUIZ)
+        break;
+    case MSG_QUIZ_SELECT:
         handle_quiz_selection(client, received_msg, &context->quizzesInfo);
-
-    else if (received_msg->type == MSG_QUIZ_ANSWER && client->state == PLAYING)
+        break;
+    case MSG_QUIZ_ANSWER:
         handle_quiz_answer(client, received_msg, &context->quizzesInfo);
-
-    else if (received_msg->type == MSG_REQ_RANKING)
+        break;
+    case MSG_REQ_RANKING:
         handle_ranking_request(client, &context->quizzesInfo);
-    else if (received_msg->type == MSG_DISCONNECT)
+        break;
+    case MSG_DISCONNECT:
         handle_client_disconnection(client, context);
-
+        break;
+    default:
+        break;
+    }
+    free(received_msg->payload);
     free(received_msg);
 }

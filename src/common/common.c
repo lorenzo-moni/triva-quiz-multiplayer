@@ -22,20 +22,17 @@ Message *create_msg(MessageType type, char *payload, size_t payload_len)
     handle_malloc_error(msg, "Errore nell'allocazione della memoria per il messaggio");
 
     msg->type = type;
-
-    // Controlla che il payload non superi la dimensione massima
-    if (payload_len >= MAX_PAYLOAD_SIZE)
-    {
-        printf("Errore: Payload troppo grande\n");
-        free(msg);
-        return NULL;
-    }
-
+    msg->payload_length = payload_len;
+    msg->payload = (char *)malloc(payload_len);
+    handle_malloc_error(msg->payload, "Errore nell'allocazione della memoria per il payload del messaggio");
     // Copia il payload
     memcpy(msg->payload, payload, payload_len);
-    msg->payload_length = payload_len;
 
     return msg;
+}
+
+void handle_send_error(int value, int length)
+{
 }
 
 void send_msg(int client_fd, Message *msg)
@@ -45,14 +42,14 @@ void send_msg(int client_fd, Message *msg)
 
     if (send(client_fd, &net_msg_type, sizeof(net_msg_type), 0) == -1)
     {
-        perror("Error in sending message type");
+        free(msg->payload);
         free(msg);
         return;
     }
     if (send(client_fd, &net_msg_payload_length, sizeof(net_msg_payload_length),
              0) == -1)
     {
-        perror("Error in sending message payload length");
+        free(msg->payload);
         free(msg);
         return;
     }
@@ -60,11 +57,12 @@ void send_msg(int client_fd, Message *msg)
     {
         if (send(client_fd, msg->payload, msg->payload_length, 0) == -1)
         {
-            perror("Error in sending payload");
+            free(msg->payload);
             free(msg);
             return;
         }
     }
+    free(msg->payload);
     free(msg);
 }
 
@@ -87,19 +85,18 @@ int receive_msg(int client_fd, Message *msg)
         return bytes_received;
 
     msg->payload_length = ntohl(net_msg_payload_length);
-
-    if (msg->payload_length > MAX_PAYLOAD_SIZE)
-    {
-        fprintf(stderr, "Errore: Payload troppo grande (%d byte).\n",
-                msg->payload_length);
-        return -1;
-    }
+    msg->payload = (char *)malloc(msg->payload_length + 1);
+    handle_malloc_error(msg->payload, "Errore nell'allocazione della memoria per il payload");
 
     if (msg->payload_length > 0)
     {
+
         bytes_received = recv(client_fd, msg->payload, msg->payload_length, 0);
         if (bytes_received <= 0)
+        {
+            free(msg->payload);
             return bytes_received;
+        }
 
         msg->payload[msg->payload_length] = '\0';
     }

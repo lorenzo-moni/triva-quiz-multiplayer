@@ -10,11 +10,8 @@
 #include "../../common/common.h"
 #include "stdbool.h"
 
-#define PORT 8080
-#define BUFFER_SIZE 1024
-
-#define SHOWSCORE "show score"
 #define ENDQUIZ "endquiz"
+#define SHOWSCORE "show score"
 
 void show_menu();
 void show_quiz_list(char **quizzes, int total_quizzes);

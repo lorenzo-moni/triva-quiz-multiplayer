@@ -18,17 +18,6 @@ void handle_selected_quiz(Message *msg)
     printf("+++++++++++++++++++++++++++");
 }
 
-void show_quiz_list(char **quizzes, int total_quizzes)
-{
-    printf("\nQuiz disponibili\n");
-    printf("+++++++++++++++++++++++++++\n");
-    for (int i = 0; i < total_quizzes; i++)
-    {
-        printf("%d - %s\n", i + 1, quizzes[i]);
-    }
-    printf("+++++++++++++++++++++++++++\n");
-}
-
 void clear_input_buffer()
 {
     int c;
