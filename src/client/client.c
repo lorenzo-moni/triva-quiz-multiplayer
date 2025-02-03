@@ -102,9 +102,6 @@ int main(int argc, const char **argv)
             case MSG_RES_RANKING:
                 handle_rankings(received_msg);
                 break;
-            case MSG_ERROR:
-                handle_error(received_msg);
-                break;
 
             default:
                 break;

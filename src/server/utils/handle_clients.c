@@ -4,17 +4,30 @@
 #include "../../common/common.h"
 #include "utils.h"
 #include <sys/select.h>
+#include "errno.h"
 
-// La funzione init_clients_info va a gestire l'inizializzazione delle informazioni relative ai clienti che si possono connettere al sistema
-// andando ad allocare dinamicamente le informazioni relative alla memorizzazione della posizione in classifica per ogni cliente in base al numero di quiz che sono
-// stati caricati a runtime
+/**
+ * @brief Gestisce l'inizializzazione delle informazioni relative ai clients che si possono connettere al sistema
+ *
+ * @param clientsInfo puntatore alla struttura con le informazioni sui clients
+ * @return struttura di tipo Quiz relativa al file file_path
+ */
 void init_clients_info(ClientsInfo *clientsInfo)
 {
     clientsInfo->connected_clients = 0;
     clientsInfo->clients_head = clientsInfo->clients_tail = NULL;
     clientsInfo->max_fd = 0;
 }
-
+/**
+ * @brief Crea un nuovo nodo di tipo client
+ *
+ * Questa funzione si occupa di inizializzare un nuovo client che si è connesso al sistema
+ * In particolare si inizializza l'array contente tutti gli oggetti RankingNode relativi alle partite del client
+ *
+ * @param client_fd file descriptor del socket del client
+ * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
+ * @return struttura di tipo Client relativa al nuovo client connesso
+ */
 Client *create_client_node(int client_fd, QuizzesInfo *quizzesInfo)
 {
     Client *new_client = (Client *)malloc(sizeof(Client));
@@ -30,7 +43,14 @@ Client *create_client_node(int client_fd, QuizzesInfo *quizzesInfo)
     memset(new_client->client_rankings, 0, quizzesInfo->total_quizzes * sizeof(RankingNode *));
     return new_client;
 }
-
+/**
+ * @brief Aggiunge una struttura di tipo Client alla lista dei client connessi
+ *
+ * Questa funzione si occupa di inserire il nodo client in coda alla lista doppiamente concatenata dei client attivi sul sistema
+ *
+ * @param node puntatore alla struttura Client da inserire
+ * @param clientsInfo puntatore alla struttura che contiene le informazioni sui clients
+ */
 void add_client(Client *node, ClientsInfo *clientsInfo)
 {
     // devo gestire il caso in cui si abbia il numero massimo di clients
@@ -46,29 +66,37 @@ void add_client(Client *node, ClientsInfo *clientsInfo)
     node->prev_node = clientsInfo->clients_tail;
     clientsInfo->clients_tail = node;
 }
-
-void remove_client(Client **node, ClientsInfo *clientsInfo)
+/**
+ * @brief Rimuove e dealloca una struttura di tipo Client alla lista dei client connessi
+ *
+ * @param node puntatore alla struttura Client da rimuovere e deallocare
+ * @param clientsInfo puntatore alla struttura che contiene le informazioni sui clients
+ */
+void remove_client(Client *node, ClientsInfo *clientsInfo)
 {
-    if (node == NULL || *node == NULL)
+    if (node == NULL)
         return;
     if (clientsInfo->clients_head == NULL)
         return;
 
-    if (clientsInfo->clients_head == *node)
-        clientsInfo->clients_head = (*node)->next_node;
+    if (clientsInfo->clients_head == node)
+        clientsInfo->clients_head = node->next_node;
 
-    if ((*node)->prev_node != NULL)
-        (*node)->prev_node->next_node = (*node)->next_node;
+    if (node->prev_node != NULL)
+        node->prev_node->next_node = node->next_node;
 
-    if ((*node)->next_node != NULL)
-        (*node)->next_node->prev_node = (*node)->prev_node;
+    if (node->next_node != NULL)
+        node->next_node->prev_node = node->prev_node;
 
-    free((*node)->nickname);
-    free((*node)->client_rankings);
-    free((*node));
-    *node = NULL;
+    free(node->nickname);
+    free(node->client_rankings);
+    free(node);
 }
-
+/**
+ * @brief Rimuove e dealloca tutti i clients all'interno della lista dei clients connessi al sistema
+ *
+ * @param clientsInfo puntatore alla struttura che contiene le informazioni sui clients
+ */
 void deallocate_clients(ClientsInfo *clientsInfo)
 {
     Client *current = clientsInfo->clients_head;
@@ -83,7 +111,13 @@ void deallocate_clients(ClientsInfo *clientsInfo)
         current = next;
     }
 }
-
+/**
+ * @brief Invia un messaggio al client per richiedere l'username
+ *
+ * Questa funzione si occupa di inviare al client con socket client_fd un messaggio di tipo MSG_REQ_NICKNAME
+ *
+ * @param clientsInfo puntatore alla struttura che contiene le informazioni sui clients
+ */
 void request_client_nickname(int client_fd)
 {
     char *message = "Scegli un nickname (deve essere univoco): ";
@@ -91,25 +125,61 @@ void request_client_nickname(int client_fd)
     send_msg(client_fd, msg);
 }
 
+/**
+ * @brief Gestisce la connessione di un nuovo client al sistema
+ *
+ * Questa funzione viene invocata quando vi è una nuova connessione sul socket del server
+ * e si occupa di accettare la connessione e di creare tutte le strutture dati necessarie
+ * per gestire il nuovo client
+ *
+ * @param context puntatore alla struttura che contiene le informazioni sul contesto del servizio
+ */
 void handle_new_client_connection(Context *context)
 {
     struct sockaddr_in client_address;
     int client_fd;
     socklen_t address_size = sizeof(client_address);
+    // accettiamo la connessione
     client_fd = accept(context->server_fd, (struct sockaddr *)&client_address, &address_size);
+    if (client_fd == -1)
+    {
+        if (errno == EINTR)
+            return;
+        else
+            exit(EXIT_FAILURE);
+    }
+    // aggiungo il file descriptor al set master
     FD_SET(client_fd, &context->masterfds);
+    // aggiorno max_fd
     if (client_fd > context->clientsInfo.max_fd)
         context->clientsInfo.max_fd = client_fd;
 
+    // creo il nodo client e lo aggiungo in coda alla lista
     Client *client = create_client_node(client_fd, &context->quizzesInfo);
     add_client(client, &context->clientsInfo);
 
+    // invio il messaggio di richiesta dell'username
     request_client_nickname(client_fd);
 }
 
+/**
+ * @brief Invia al client la lista dei quiz disponibili
+ *
+ * Questa funzione si occupa di effettuare la serializzazione utilizzando binary protocol
+ * della lista dei quiz disponibili e di inviarli al client
+ *
+ * In particolare utilizzo la funzione htonl per confertire da host byte order a network byte order
+ * e utilizzo i tipi standardizzati uint32_t per garantire la portabilità
+ *
+ * I dati relativi ai quiz disponibili verranno serializzati secondo questo formato binary
+ * [numero quizzes][lunghezza nome][nome][lunghezza nome][nome]...
+ *
+ * @param client puntatore al client a cui inviare la lista
+ * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
+ */
 void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 {
-    // gestiamo la serializzazione della lista di quiz
+    // creiamo un payload per il nostro pacchetto di dimensione standard
     size_t buffer_size = DEFAULT_PAYLOAD_SIZE;
     char *payload = (char *)malloc(buffer_size);
     handle_malloc_error(payload, "Errore nell'allocazione del payload");
@@ -118,6 +188,7 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
     size_t string_len;
     uint32_t net_string_len;
 
+    // inserisco nel buffer il numero totale di quiz disponibili
     uint32_t net_strings_num = htonl(quizzesInfo->total_quizzes);
     memcpy(pointer, &net_strings_num, sizeof(uint32_t));
     pointer += sizeof(uint32_t);
@@ -134,18 +205,21 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
         // non è abbastanza capiente
         if (pointer + sizeof(uint32_t) + string_len > payload + buffer_size)
         {
+            // nel caso in cui la dimensione del buffer non sia abbastanza capiente lo rialloco
             size_t new_size = buffer_size * 2;
             char *new_payload = (char *)realloc(payload, new_size);
-            handle_malloc_error(new_payload, "Errore nelle riallocazine di payload");
+            handle_malloc_error(new_payload, "Errore nelle riallocazione di payload");
 
             pointer = new_payload + (pointer - payload);
             payload = new_payload;
             buffer_size = new_size;
         }
 
+        // copio nel buffer la dimensione della stringa
         memcpy(pointer, &net_string_len, sizeof(uint32_t));
         pointer += sizeof(uint32_t);
 
+        // copio nel buffer la stringa
         memcpy(pointer, quiz->name, string_len);
         pointer += string_len;
     }
@@ -154,17 +228,29 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 
     client->state = SELECTING_QUIZ;
 
+    // invio il messaggio serializzato
     Message *msg = create_msg(MSG_RES_QUIZ_LIST, payload, payload_size);
     send_msg(client->socket_fd, msg);
+    free(payload);
 }
 
-// // questa funzione va a verificare se l'nickname è valido
+/**
+ * @brief Controlla la validità del nickname fornito dal client
+ *
+ * Questa funzione viene invocata in seguito alla ricezione di un messaggio di tipo MSG_SET_NICKNAME dal client e
+ * si occupa di controllare se questo è valido o meno controllando la sua unicità
+ *
+ * @param client puntatore al client che ha inviato il nickname
+ * @param received_msg puntatore al messaggio ricevuto
+ * @param clientsInfo puntatore alla struttura con le informazioni sui clients
+ */
 void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *clientsInfo)
 {
     char *selected_nickname = received_msg->payload;
 
     int found = 0;
 
+    // eseguo una ricerca lineare tra i client a cui è già stato associato un nickname
     Client *current_client = clientsInfo->clients_head;
     while (current_client != NULL)
     {
@@ -177,28 +263,41 @@ void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *
     }
     if (found)
     {
+        // se il nickname è già utilizzato invio un messaggio che indica la situazione
         char *message = "Nickname già in uso";
-        Message *error_msg = create_msg(MSG_ERROR, message, strlen(message));
+        Message *error_msg = create_msg(MSG_INFO, message, strlen(message));
         send_msg(client->socket_fd, error_msg);
+        // richiedo nuovamente al client di fornire un nickname valido
         request_client_nickname(client->socket_fd);
         return;
     }
+
     client->state = LOGGED_IN;
     clientsInfo->connected_clients += 1;
     client->nickname = malloc(strlen(selected_nickname) + 1);
     handle_malloc_error(client->nickname, "Errore nell'allocazione della memoria per il nickname del client");
     strcpy(client->nickname, selected_nickname);
 
+    // invio di un messaggio di nickname corretto al client
     Message *msg = create_msg(MSG_OK_NICKNAME, "", 0);
     send_msg(client->socket_fd, msg);
 }
-
+/**
+ * @brief Gestisce la disconnessione di un client
+ *
+ * Questa funzione va a gestire la disconnessione di un client che può avvenire esplicitamente tramite l'invio di un messaggio MSG_DISCONNECT
+ * oppure implicitamente attraverso la chiusura diretta del socket
+ *
+ * @param client puntatore al client che si vuole disconnettere
+ * @param context puntatore alla struttura che contiene le informazioni sul contesto del servizio
+ */
 void handle_client_disconnection(Client *client, Context *context)
 {
+    // rimuovo il client dal set dei descrittori attivi e chiudo il socket
     FD_CLR(client->socket_fd, &context->masterfds);
     close(client->socket_fd);
 
-    // pulisco le strutture allocate in client
+    // rimuovo tutte le classifiche del client
     for (int i = 0; i < context->quizzesInfo.total_quizzes; i++)
         remove_ranking(client->client_rankings[i], context->quizzesInfo.quizzes[i]);
 
@@ -210,36 +309,50 @@ void handle_client_disconnection(Client *client, Context *context)
         while (current_client)
         {
             if (current_client != client && current_client->socket_fd > context->clientsInfo.max_fd)
-            {
                 context->clientsInfo.max_fd = current_client->socket_fd;
-            }
+
             current_client = current_client->next_node;
         }
     }
 
-    remove_client(&client, &context->clientsInfo);
     context->clientsInfo.connected_clients--;
+    remove_client(client, &context->clientsInfo);
 }
-
+/**
+ * @brief Invia la domanda corrente al client
+ *
+ * Questa funzione invia al client un messaggio di tipo MSG_QUIZ_QUESTION che contiene la successiva domanda del quiz a cui
+ * sta partecipando
+ *
+ * @param client puntatore al client a cui inviare la domanda
+ * @param quiz puntatore alla struttura che contiene le informazioni sul quiz
+ */
 void send_quiz_question(Client *client, Quiz *quiz)
 {
     int question_to_send_id = client->client_rankings[client->current_quiz_id]->current_question;
     if (question_to_send_id >= quiz->total_questions)
         return;
+    // si seleziona la domanda corretta da inviare e si invia al client
     char *question_to_send = quiz->questions[question_to_send_id]->question;
 
     Message *msg = create_msg(MSG_QUIZ_QUESTION, question_to_send, strlen(question_to_send));
     send_msg(client->socket_fd, msg);
 }
-
-int verify_quiz_answer(char *answer, QuizQuestion *question)
+/**
+ * @brief Verifica la risposta del client
+ *
+ * Questa funzione controlla se la risposta si trova tra le risposte possibili per quella domanda
+ * Si noti che le risposte sono case insensitive
+ *
+ * @param answer puntatore alla risposta del client
+ * @param quiz puntatore alla struttura che contiene la domanda del quiz
+ */
+bool verify_quiz_answer(char *answer, QuizQuestion *question)
 {
-
     for (int a = 0; a < question->total_answers; a++)
         if (strcasecmp(answer, question->answers[a]) == 0)
-            return 1;
-
-    return 0;
+            return true;
+    return false;
 }
 
 void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
@@ -296,7 +409,7 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
     if (*endptr != '\0' || selected_quiz_number > quizzesInfo->total_quizzes)
     {
         char *message = "Quiz selezionato non valido";
-        Message *error_msg = create_msg(MSG_ERROR, message, strlen(message));
+        Message *error_msg = create_msg(MSG_INFO, message, strlen(message));
         send_msg(client->socket_fd, error_msg);
 
         send_quiz_list(client, quizzesInfo);
@@ -307,7 +420,7 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
     if (client->client_rankings[selected_quiz_number - 1] != NULL)
     {
         char *message = "Il quiz selezionato è già stato completato in questa sessione";
-        Message *error_msg = create_msg(MSG_ERROR, message, strlen(message));
+        Message *error_msg = create_msg(MSG_INFO, message, strlen(message));
         send_msg(client->socket_fd, error_msg);
 
         send_quiz_list(client, quizzesInfo);

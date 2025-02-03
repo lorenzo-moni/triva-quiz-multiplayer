@@ -16,25 +16,11 @@ int main()
     int activity;
     Context context;
     struct sockaddr_in server_address;
+    int opt = 1;
 
     load_quizzes_from_directory("./quizzes", &context.quizzesInfo);
     init_clients_info(&context.clientsInfo);
     signal(SIGPIPE, SIG_IGN);
-
-    // for (int i = 0; i < quizzesInfo.total_quizzes; i++)
-    // {
-    //     Quiz *current_quiz = quizzesInfo.quizzes[i];
-    //     printf("%s\n", current_quiz->name);
-    //     for (int j = 0; j < current_quiz->total_questions; j++)
-    //     {
-    //         printf("Domanda: %s \n", current_quiz->questions[j]->question);
-    //         for (int a = 0; a < current_quiz->questions[j]->total_answers; a++)
-    //         {
-    //             printf("Risposta: %s\n", current_quiz->questions[j]->answers[a]);
-    //         }
-    //     }
-    //     printf("\n");
-    // }
 
     FD_ZERO(&context.masterfds);
     FD_ZERO(&context.readfds);
@@ -46,7 +32,6 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    int opt = 1;
     if (setsockopt(context.server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
     {
         perror("Errore nell'impostazione di SO_REUSEADDR");
@@ -60,8 +45,7 @@ int main()
     server_address.sin_port = htons(PORT);
 
     // Binding del socket
-    if (bind(context.server_fd, (struct sockaddr *)&server_address,
-             sizeof(server_address)) < 0)
+    if (bind(context.server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
     {
         perror("Bind fallita");
         exit(EXIT_FAILURE);
@@ -81,6 +65,7 @@ int main()
     context.clientsInfo.max_fd = context.server_fd > STDIN_FILENO ? context.server_fd : STDERR_FILENO;
     Client *client;
 
+    // serve fare fare in modo che l'utente possa inserire una carattere alla volta sul terminale
     enable_raw_mode();
 
     // Ciclo principale del server
@@ -90,16 +75,16 @@ int main()
 
         show_dashboard(&context);
 
-        // Aspetta eventi con `select()`
         activity = select(context.clientsInfo.max_fd + 1, &context.readfds, NULL, NULL, NULL);
 
+        // controllo eventuali errori nella select
         if ((activity < 0) && (errno != EINTR))
         {
             perror("Select fallita");
             disable_raw_mode();
             exit(EXIT_FAILURE);
         }
-
+        // controllo se l'utente ha digitato il carattere "q" per terminare il server
         if (FD_ISSET(STDIN_FILENO, &context.readfds))
         {
             char input;
@@ -108,9 +93,11 @@ int main()
                 break;
         }
 
+        // gestisco una nuova connessione sul server da parte di un utente
         if (FD_ISSET(context.server_fd, &context.readfds))
             handle_new_client_connection(&context);
 
+        // ciclo all'interno della lista dei clients per gestire le richieste inviate sui rispettivi socket
         client = context.clientsInfo.clients_head;
         while (client)
         {
@@ -123,7 +110,9 @@ int main()
     printf("\nTerminazione del server\n");
     close(context.server_fd);
 
+    // dealloco i quiz
     deallocate_quizzes(&context.quizzesInfo);
+    // dealloco i clients
     deallocate_clients(&context.clientsInfo);
 
     return 0;

@@ -101,10 +101,6 @@ void handle_quiz_selection(int server_fd, Message *msg)
     send_msg(server_fd, reply_msg);
 }
 
-void handle_error(Message *msg)
-{
-    printf("\n%s\n", msg->payload);
-}
 void handle_message(Message *msg)
 {
     printf("\n%s\n", msg->payload);

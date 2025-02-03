@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <limits.h>
 #include <string.h>
+#include <stdbool.h>
 #include "../../common/common.h"
 
 typedef enum ClientState
@@ -107,6 +108,6 @@ void list_rankings(Quiz *quiz);
 void list_completed_rankings(Quiz *quiz);
 void update_ranking(RankingNode *node, Quiz *quiz);
 void remove_ranking(RankingNode *node, Quiz *quiz);
-void deallocate_ranking(RankingNode *head);
+void deallocate_rankings(Quiz *quiz);
 
 #endif // UTILS_H
