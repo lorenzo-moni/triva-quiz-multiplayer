@@ -1,0 +1,26 @@
+# Nome del progetto
+PROJECT_NAME = "Trivia Quiz Multiplayer - Moni 654425"
+
+# Directory di output per la documentazione generata
+OUTPUT_DIRECTORY = ./docs
+
+# Directory contenenti i file sorgente
+INPUT = ./src
+
+# Includi le sottodirectory durante la ricerca dei file sorgente
+RECURSIVE = YES
+
+# Linguaggio della documentazione
+OUTPUT_LANGUAGE = Italian
+
+# Genera documentazione in formato HTML
+GENERATE_HTML = YES
+
+# Genera documentazione in formato LaTeX (imposta su NO se non necessario)
+GENERATE_LATEX = NO
+
+# Estrai tutta la documentazione, anche se i commenti non sono presenti
+EXTRACT_ALL = YES
+
+# Ottimizza l'output per il linguaggio C
+OPTIMIZE_OUTPUT_FOR_C = YES

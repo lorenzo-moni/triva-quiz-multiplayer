@@ -111,6 +111,52 @@ void deallocate_clients(ClientsInfo *clientsInfo)
         current = next;
     }
 }
+
+/**
+ * @brief Controlla se il buffer payload ha abbastanza spazio al suo interno e nel caso lo rialloca
+ *
+ * Questa funzione viene utilizzata per fare in modo da non generare buffer overflow nelle funzioni
+ * send_quiz_list e send_ranking che usano il binary protocol e la serializzazione per inviare la lista dei quiz
+ * e i ranking rispettivamente.abort
+ *
+ * La funzione va a controllare se la quantità di spazio rimasto nel buffer, dato da *pointer - *payload è sufficiente a contenere le informazioni che
+ * vi si vogliono copiare dentro, di dimensione extra_size.abort
+ *
+ * Se questo spazio non necessario si duplica la dimensione del buffer finché non si riesce a coprire tutto il buffer e si rialloca il buffer payload
+ * tramite realloc
+ *
+ * @param payload puntatore a puntatore all'indirizzo iniziale del buffer
+ * @param pointer puntatore a puntatore all'indirizzo correntemente in uso del buffer
+ * @param buffer_size puntatore alla dimensione corrente del buffer
+ * @param extra_size quantità di spazio aggiuntiva necessaria
+ */
+
+void ensure_capacity(char **payload, char **pointer, size_t *buffer_size, size_t extra_size)
+{
+    // calcolo lo spazio già usato e quello necessario
+    size_t used_size = *pointer - *payload;
+    size_t required_size = used_size + extra_size;
+
+    // se abbiamo già abbastanza spazio non faccio nulla
+    if (required_size <= *buffer_size)
+        return;
+
+    // altrimenti raddoppio la dimensione finché non abbiamo lo spazio necessario
+    size_t new_size = *buffer_size;
+    while (new_size < required_size)
+        new_size *= 2;
+
+    // salvo l'offset dato che dopo realloc *payload non sarà più valido
+    ptrdiff_t offset = *pointer - *payload;
+    char *new_payload = (char *)realloc(*payload, new_size);
+    handle_malloc_error(new_payload, "Errore nella riallocazione del payload");
+
+    // ripristino i valori per la funzione chiamante
+    *payload = new_payload;
+    *pointer = new_payload + offset;
+    *buffer_size = new_size;
+}
+
 /**
  * @brief Invia un messaggio al client per richiedere l'username
  *
@@ -121,8 +167,7 @@ void deallocate_clients(ClientsInfo *clientsInfo)
 void request_client_nickname(int client_fd)
 {
     char *message = "Scegli un nickname (deve essere univoco): ";
-    Message *msg = create_msg(MSG_REQ_NICKNAME, message, strlen(message));
-    send_msg(client_fd, msg);
+    send_msg(client_fd, MSG_REQ_NICKNAME, message, strlen(message));
 }
 
 /**
@@ -172,7 +217,9 @@ void handle_new_client_connection(Context *context)
  * e utilizzo i tipi standardizzati uint32_t per garantire la portabilità
  *
  * I dati relativi ai quiz disponibili verranno serializzati secondo questo formato binary
- * [numero quizzes][lunghezza nome][nome][lunghezza nome][nome]...
+ * (numero quizzes) [(lunghezza nome)(nome)] [(lunghezza nome)(nome)] [...]
+ * dove le parentesi danno un'idea del livello di annidamento e chiaramente non sono incluse nei dati inviati
+ *
  *
  * @param client puntatore al client a cui inviare la lista
  * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
@@ -183,19 +230,21 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
     size_t buffer_size = DEFAULT_PAYLOAD_SIZE;
     char *payload = (char *)malloc(buffer_size);
     handle_malloc_error(payload, "Errore nell'allocazione del payload");
+    int payload_size;
 
     char *pointer = payload;
     size_t string_len;
     uint32_t net_string_len;
 
-    // inserisco nel buffer il numero totale di quiz disponibili
+    // inserisco nel buffer il numero totale di quiz disponibili assicurandomi che all'interno del buffer ci sia abbastanza spazio
     uint32_t net_strings_num = htonl(quizzesInfo->total_quizzes);
+    ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t));
     memcpy(pointer, &net_strings_num, sizeof(uint32_t));
     pointer += sizeof(uint32_t);
 
     Quiz *quiz;
 
-    for (int i = 0; i < quizzesInfo->total_quizzes; i++)
+    for (uint32_t i = 0; i < quizzesInfo->total_quizzes; i++)
     {
         quiz = quizzesInfo->quizzes[i];
         string_len = strlen(quiz->name);
@@ -203,17 +252,7 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 
         // gestisco la situazione in cui il buffer payload precedentemente allocato
         // non è abbastanza capiente
-        if (pointer + sizeof(uint32_t) + string_len > payload + buffer_size)
-        {
-            // nel caso in cui la dimensione del buffer non sia abbastanza capiente lo rialloco
-            size_t new_size = buffer_size * 2;
-            char *new_payload = (char *)realloc(payload, new_size);
-            handle_malloc_error(new_payload, "Errore nelle riallocazione di payload");
-
-            pointer = new_payload + (pointer - payload);
-            payload = new_payload;
-            buffer_size = new_size;
-        }
+        ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t) + string_len);
 
         // copio nel buffer la dimensione della stringa
         memcpy(pointer, &net_string_len, sizeof(uint32_t));
@@ -224,13 +263,12 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
         pointer += string_len;
     }
 
-    int payload_size = pointer - payload;
+    payload_size = pointer - payload;
 
     client->state = SELECTING_QUIZ;
 
     // invio il messaggio serializzato
-    Message *msg = create_msg(MSG_RES_QUIZ_LIST, payload, payload_size);
-    send_msg(client->socket_fd, msg);
+    send_msg(client->socket_fd, MSG_RES_QUIZ_LIST, payload, payload_size);
     free(payload);
 }
 
@@ -247,8 +285,15 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *clientsInfo)
 {
     char *selected_nickname = received_msg->payload;
+    if (!received_msg->payload_length)
+    {
+        char *message = "Il nickname non può essere vuoto";
+        send_msg(client->socket_fd, MSG_INFO, message, strlen(message));
+        request_client_nickname(client->socket_fd);
+        return;
+    }
 
-    int found = 0;
+    bool found = 0;
 
     // eseguo una ricerca lineare tra i client a cui è già stato associato un nickname
     Client *current_client = clientsInfo->clients_head;
@@ -256,7 +301,7 @@ void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *
     {
         if (current_client->nickname && strcmp(selected_nickname, current_client->nickname) == 0)
         {
-            found = 1;
+            found = true;
             break;
         }
         current_client = current_client->next_node;
@@ -265,8 +310,7 @@ void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *
     {
         // se il nickname è già utilizzato invio un messaggio che indica la situazione
         char *message = "Nickname già in uso";
-        Message *error_msg = create_msg(MSG_INFO, message, strlen(message));
-        send_msg(client->socket_fd, error_msg);
+        send_msg(client->socket_fd, MSG_INFO, message, strlen(message));
         // richiedo nuovamente al client di fornire un nickname valido
         request_client_nickname(client->socket_fd);
         return;
@@ -278,9 +322,8 @@ void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *
     handle_malloc_error(client->nickname, "Errore nell'allocazione della memoria per il nickname del client");
     strcpy(client->nickname, selected_nickname);
 
-    // invio di un messaggio di nickname corretto al client
-    Message *msg = create_msg(MSG_OK_NICKNAME, "", 0);
-    send_msg(client->socket_fd, msg);
+    // invio il messaggio di nickname corretto al client
+    send_msg(client->socket_fd, MSG_OK_NICKNAME, "", 0);
 }
 /**
  * @brief Gestisce la disconnessione di un client
@@ -298,7 +341,7 @@ void handle_client_disconnection(Client *client, Context *context)
     close(client->socket_fd);
 
     // rimuovo tutte le classifiche del client
-    for (int i = 0; i < context->quizzesInfo.total_quizzes; i++)
+    for (uint32_t i = 0; i < context->quizzesInfo.total_quizzes; i++)
         remove_ranking(client->client_rankings[i], context->quizzesInfo.quizzes[i]);
 
     // aggiorno max_fd
@@ -329,14 +372,13 @@ void handle_client_disconnection(Client *client, Context *context)
  */
 void send_quiz_question(Client *client, Quiz *quiz)
 {
-    int question_to_send_id = client->client_rankings[client->current_quiz_id]->current_question;
+    uint32_t question_to_send_id = client->client_rankings[client->current_quiz_id]->current_question;
     if (question_to_send_id >= quiz->total_questions)
         return;
     // si seleziona la domanda corretta da inviare e si invia al client
     char *question_to_send = quiz->questions[question_to_send_id]->question;
 
-    Message *msg = create_msg(MSG_QUIZ_QUESTION, question_to_send, strlen(question_to_send));
-    send_msg(client->socket_fd, msg);
+    send_msg(client->socket_fd, MSG_QUIZ_QUESTION, question_to_send, strlen(question_to_send));
 }
 /**
  * @brief Verifica la risposta del client
@@ -354,19 +396,28 @@ bool verify_quiz_answer(char *answer, QuizQuestion *question)
             return true;
     return false;
 }
-
+/**
+ * @brief Gestisce il messaggio di risposta ad una domanda del quiz del client
+ *
+ * Questa funzione viene invocata in seguito alla ricezione di un messaggio di tipo MSG_QUIZ_ANSWER dal client
+ * e si occupa di andare a controllare la correttezza della risposta, di notificare l'esito al client tramite un messaggio
+ * MSG_INFO e di aggiornare la classifica relativa al quiz nel caso della correttezza della risposta.
+ * Inoltre si occupa di inviare la domanda successiva nel caso in cui il quiz non sia terminato, altrimenti invia nuovamente la lista dei quiz
+ *
+ * @param client puntatore al client che ha inviato la risposta
+ * @param msg puntatore al messaggio che contiene la risposta
+ * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
+ */
 void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 {
     char *user_answer = msg->payload;
-
     RankingNode *current_ranking = client->client_rankings[client->current_quiz_id];
     Quiz *playing_quiz = quizzesInfo->quizzes[client->current_quiz_id];
     QuizQuestion *current_question = playing_quiz->questions[current_ranking->current_question];
-    Message *result_msg;
     char *payload;
 
-    int correct_answer = verify_quiz_answer(user_answer, current_question);
-
+    bool correct_answer = verify_quiz_answer(user_answer, current_question);
+    // nel caso in cui la risposta è corretta aggiorno il punteggio del client e aggiorno la classifica
     if (correct_answer)
     {
         payload = "Risposta corretta";
@@ -374,43 +425,47 @@ void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
         update_ranking(current_ranking, playing_quiz);
     }
     else
-    {
         payload = "Risposta errata";
-    }
 
-    result_msg = create_msg(MSG_INFO, payload, strlen(payload));
-    send_msg(client->socket_fd, result_msg);
+    send_msg(client->socket_fd, MSG_INFO, payload, strlen(payload));
 
     current_ranking->current_question += 1;
     if (current_ranking->current_question == playing_quiz->total_questions)
     {
         current_ranking->is_quiz_completed = 1;
-        char *payload = "Hai terminato il quiz";
-        Message *msg = create_msg(MSG_INFO, payload, strlen(payload));
-        send_msg(client->socket_fd, msg);
+        payload = "Hai terminato il quiz";
+        send_msg(client->socket_fd, MSG_INFO, payload, strlen(payload));
         client->state = SELECTING_QUIZ;
         send_quiz_list(client, quizzesInfo);
     }
-
     else
         send_quiz_question(client, playing_quiz);
 }
-
+/**
+ * @brief Gestisce la selezione di un quiz da parte del client
+ *
+ * Questa funzione viene invocata in seguito alla ricezione di un messaggio di tipo MSG_QUIZ_SELECT dal client
+ * e si occupa di andare ad inizializzare le strutture dati necessarie per la sessione di quiz
+ *
+ * @param client puntatore al client che ha selezionato il quiz
+ * @param msg puntatore al messaggio che contiene il quiz selezionato
+ * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
+ */
 void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 {
-
-    // nel caso in cui il payload non contenga
+    // strtoul tenta di convertire una stringa ricevuta in un unsigned long int in base 10
+    // endptr viene impostato all'ultimo valore non convertito, dunque può essere usato per
+    // capire se non è stato possibile effettuare la conversione
     char *endptr;
-    int selected_quiz_number = (int)strtoul(msg->payload, &endptr, 10);
+    uint32_t selected_quiz_number = (uint32_t)strtoul(msg->payload, &endptr, 10);
 
     // Gestisco le possibili situazioni di errore
 
     // Il quiz indicato non è disponibile
-    if (*endptr != '\0' || selected_quiz_number > quizzesInfo->total_quizzes)
+    if (*endptr != '\0' || selected_quiz_number > quizzesInfo->total_quizzes || selected_quiz_number <= 0)
     {
         char *message = "Quiz selezionato non valido";
-        Message *error_msg = create_msg(MSG_INFO, message, strlen(message));
-        send_msg(client->socket_fd, error_msg);
+        send_msg(client->socket_fd, MSG_INFO, message, strlen(message));
 
         send_quiz_list(client, quizzesInfo);
         return;
@@ -420,60 +475,79 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
     if (client->client_rankings[selected_quiz_number - 1] != NULL)
     {
         char *message = "Il quiz selezionato è già stato completato in questa sessione";
-        Message *error_msg = create_msg(MSG_INFO, message, strlen(message));
-        send_msg(client->socket_fd, error_msg);
+        send_msg(client->socket_fd, MSG_INFO, message, strlen(message));
 
         send_quiz_list(client, quizzesInfo);
         return;
     }
     client->current_quiz_id = selected_quiz_number - 1;
 
-    // Inizializzo le informazioni relative al Ranking
+    // Inizializzo le informazioni relative al ranking
     Quiz *selected_quiz = quizzesInfo->quizzes[selected_quiz_number - 1];
     RankingNode *new_node = create_ranking_node(client);
     client->client_rankings[client->current_quiz_id] = new_node;
 
+    // inserisco il nodo nella lista doppiamente concatenata relativa al ranking del quiz
     insert_ranking_node(selected_quiz, new_node);
 
     client->state = PLAYING;
 
-    Message *selected_quiz_msg = create_msg(MSG_QUIZ_SELECTED, selected_quiz->name, strlen(selected_quiz->name));
-    send_msg(client->socket_fd, selected_quiz_msg);
+    // invio al client un messaggio relativo al fatto che ha selezionato un quiz corretto
+    send_msg(client->socket_fd, MSG_QUIZ_SELECTED, selected_quiz->name, strlen(selected_quiz->name));
 
+    // invio al client la prima domanda
     send_quiz_question(client, selected_quiz);
 }
-
-void handle_ranking_request(Client *client, QuizzesInfo *quizzesInfo)
+/**
+ * @brief Invia al client la classifica per ogni quiz
+ *
+ * Questa funzione si occupa di effettuare la serializzazione utilizzando binary protocol
+ * della classifica dei clients per ogni quiz
+ *
+ * In particolare utilizzo la funzione htonl per confertire da host byte order a network byte order
+ * e utilizzo i tipi standardizzati uint32_t per garantire la portabilità
+ *
+ * I dati relativi al ranking dei quiz verranno serializzati secondo questo formato binary protocol
+ * (numero quizzes)  {(numero utenti partecipanti al quiz) [(lunghezza nome) (nome) (score)]} {...}
+ * dove le parentesi danno un'idea del livello di annidamento e chiaramente non sono incluse nei dati inviati
+ *
+ * @param client puntatore al client a cui inviare il ranking
+ * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
+ */
+void send_ranking(Client *client, QuizzesInfo *quizzesInfo)
 {
+    // alloco un buffer di dimensione standard che potrà essere ampliato
     size_t buffer_size = DEFAULT_PAYLOAD_SIZE;
     char *payload = (char *)malloc(buffer_size);
     handle_malloc_error(payload, "Errore nell'allocazione del payload");
 
-    // [numero quizzes] [[numero utenti partecipanti al quiz] [[lunghezza nome] [nome] [score]]]
-
+    // alloco le strutture dati necessarie
     char *pointer = payload;
-    int clients_per_quiz;
     size_t string_len;
-    uint32_t net_string_len, net_client_score, net_clients_per_quiz;
+    uint32_t net_string_len, net_client_score, net_clients_per_quiz, clients_per_quiz;
     char *quiz_total_clients_pointer;
+    int payload_size;
 
     // inserisco il numero totale di quizzes per cui dobbiamo stampare la classifica
     uint32_t net_quizzes_num = htonl(quizzesInfo->total_quizzes);
+    ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t));
     memcpy(pointer, &net_quizzes_num, sizeof(uint32_t));
     pointer += sizeof(uint32_t);
 
     // per ogni quiz inserisco in ordine: numero di utenti che hanno partecipato,
-    // lunghezza di ogni nome utente, nome utente e punteggio
-    for (int i = 0; i < quizzesInfo->total_quizzes; i++)
+    // e per ogni utente lunghezza nome, nome e score
+    for (uint32_t i = 0; i < quizzesInfo->total_quizzes; i++)
     {
         Quiz *quiz = quizzesInfo->quizzes[i];
         // memorizzo la posizione dove andare ad inserire al termine del conteggio il numero totale
         // di utenti che sono in classifica per il quiz corrente
         quiz_total_clients_pointer = pointer;
+        ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t));
         pointer += sizeof(uint32_t);
 
         clients_per_quiz = 0;
         RankingNode *current = quiz->ranking_head;
+        // vado a scorrere la lista della classifica relativa al quiz
         while (current)
         {
             clients_per_quiz += 1;
@@ -482,18 +556,9 @@ void handle_ranking_request(Client *client, QuizzesInfo *quizzesInfo)
 
             // gestisco la situazine in cui il buffer allocato non è abbastanza grande da contenere
             // le informazioni
-            if (pointer + sizeof(uint32_t) + string_len + sizeof(uint32_t) > payload + buffer_size)
-            {
-                size_t new_size = buffer_size * 2;
-                char *new_payload = (char *)realloc(payload, new_size);
-                handle_malloc_error(new_payload, "Errore nella riallocazione della memoria per il payload");
+            ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t) + string_len + sizeof(uint32_t));
 
-                pointer = new_payload + (pointer - payload);
-                payload = new_payload;
-                buffer_size = new_size;
-            }
-
-            // inserisco la lunghezza del nickname del client corrent
+            // inserisco la lunghezza del nickname del cliente corrente
             memcpy(pointer, &net_string_len, sizeof(uint32_t));
             pointer += sizeof(uint32_t);
 
@@ -513,19 +578,21 @@ void handle_ranking_request(Client *client, QuizzesInfo *quizzesInfo)
         memcpy(quiz_total_clients_pointer, &net_clients_per_quiz, sizeof(uint32_t));
     }
 
-    int payload_size = pointer - payload;
-
-    Message *reply_msg = create_msg(MSG_RES_RANKING, payload, payload_size);
-    send_msg(client->socket_fd, reply_msg);
+    payload_size = pointer - payload;
+    // invio il payload al client in un messaggio MSG_RES_RANKING
+    send_msg(client->socket_fd, MSG_RES_RANKING, payload, payload_size);
 
     free(payload);
 
+    // in base allo stato in cui si trova il client vado ad inviare un messaggio diverso
     switch (client->state)
     {
     case PLAYING:
+        // nel caso in cui sia in una sessione di quiz invio la domanda a cui deve rispondere
         send_quiz_question(client, quizzesInfo->quizzes[client->current_quiz_id]);
         break;
     case SELECTING_QUIZ:
+        // nel caso in cui sia nella selezione del quiz invio la lista dei quiz
         send_quiz_list(client, quizzesInfo);
         break;
     default:
@@ -533,14 +600,27 @@ void handle_ranking_request(Client *client, QuizzesInfo *quizzesInfo)
     }
 }
 
+/**
+ * @brief Gestisce la ricezione di un messaggio da parte di un client
+ *
+ * Questa funzione viene invocata ogni volta che un socket viene inserito all'interno del set readfds e va a gestire la richiesta del client
+ * in base a quello che il tipo del messaggio ricevuto.
+ *
+ * Tramite la funzione receive_msg si ottiene il messaggio inviato dal client, si gestiscono eventuali disconnessioni ed errori che si possono verificare
+ * durante la trasmissione
+ *
+ * @param client puntatore al client che è stato inserito in readfds
+ * @param context puntatore alla struttura che contiene le informazioni sul contesto del servizio
+ */
 void handle_client(Client *client, Context *context)
 {
-    Message *received_msg = (Message *)malloc(sizeof(Message));
-    int res = receive_msg(client->socket_fd, received_msg);
+    Message received_msg;
+    int res = receive_msg(client->socket_fd, &received_msg);
     if (res == 0)
     {
         printf("Il client ha chiuso la connessione in modo brusco\n");
         handle_client_disconnection(client, context);
+        free(received_msg.payload);
         return;
     }
     else if (res == -1)
@@ -549,22 +629,22 @@ void handle_client(Client *client, Context *context)
         exit(EXIT_FAILURE);
     }
 
-    switch (received_msg->type)
+    switch (received_msg.type)
     {
     case MSG_SET_NICKNAME:
-        handle_client_nickname(client, received_msg, &context->clientsInfo);
+        handle_client_nickname(client, &received_msg, &context->clientsInfo);
         break;
     case MSG_REQ_QUIZ_LIST:
         send_quiz_list(client, &context->quizzesInfo);
         break;
     case MSG_QUIZ_SELECT:
-        handle_quiz_selection(client, received_msg, &context->quizzesInfo);
+        handle_quiz_selection(client, &received_msg, &context->quizzesInfo);
         break;
     case MSG_QUIZ_ANSWER:
-        handle_quiz_answer(client, received_msg, &context->quizzesInfo);
+        handle_quiz_answer(client, &received_msg, &context->quizzesInfo);
         break;
     case MSG_REQ_RANKING:
-        handle_ranking_request(client, &context->quizzesInfo);
+        send_ranking(client, &context->quizzesInfo);
         break;
     case MSG_DISCONNECT:
         handle_client_disconnection(client, context);
@@ -572,6 +652,5 @@ void handle_client(Client *client, Context *context)
     default:
         break;
     }
-    free(received_msg->payload);
-    free(received_msg);
+    free(received_msg.payload);
 }

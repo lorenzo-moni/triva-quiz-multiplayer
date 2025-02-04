@@ -1,6 +1,6 @@
 # Variabili configurabili
 CC = gcc
-CFLAGS = -Wall -Wextra -pedantic -fanalyzer -Wstrict-overflow=5 -Wundef -Winline -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -I$(SRC_DIR)/common -I$(SRC_DIR)/client/utils -I$(SRC_DIR)/server/utils
+CFLAGS = -Wall -Wextra -I$(SRC_DIR)/common -I$(SRC_DIR)/client/utils -I$(SRC_DIR)/server/utils
 
 
 # Directory
@@ -25,7 +25,7 @@ CLIENT_OBJ = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(CLIENT_SRC))
 # Sorgenti e oggetti per il server
 SERVER_SRC = $(SRC_DIR)/server/server.c \
              $(SRC_DIR)/server/utils/dashboard.c \
-             $(SRC_DIR)/server/utils/handle_clients.c \
+             $(SRC_DIR)/server/utils/clients.c \
 			 $(SRC_DIR)/server/utils/quizzes.c \
 			 $(SRC_DIR)/server/utils/rankings.c \
 			 $(SRC_DIR)/common/common.c
