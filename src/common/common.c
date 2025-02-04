@@ -41,10 +41,16 @@ void send_msg(int dest_fd, MessageType type, char *payload, size_t payload_lengt
     uint32_t net_msg_payload_length = htonl(payload_length);
 
     if (send(dest_fd, &net_msg_type, sizeof(net_msg_type), 0) == -1)
+    {
         printf("Errore nell'invio del messaggio\n");
+        return;
+    }
 
     if (send(dest_fd, &net_msg_payload_length, sizeof(net_msg_payload_length), 0) == -1)
+    {
         printf("Errore nell'invio del messaggio\n");
+        return;
+    }
 
     if (payload_length > 0)
         if (send(dest_fd, payload, payload_length, 0) == -1)

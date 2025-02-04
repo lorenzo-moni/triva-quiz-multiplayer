@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include "../../common/common.h"
+#include "../../common/params.h"
 #include "utils.h"
 #include <sys/select.h>
 #include "errno.h"
@@ -620,7 +621,6 @@ void handle_client(Client *client, Context *context)
     {
         printf("Il client ha chiuso la connessione in modo brusco\n");
         handle_client_disconnection(client, context);
-        free(received_msg.payload);
         return;
     }
     else if (res == -1)

@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include "../../common/common.h"
+#include "../../common/params.h"
 
 /**
  * @brief Gestisce la selezione del nickname da parte dell'utente

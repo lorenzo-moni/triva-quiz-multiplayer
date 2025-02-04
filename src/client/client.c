@@ -6,6 +6,7 @@
 #include "utils/utils.h"
 #include "signal.h"
 #include "../common/common.h"
+#include "../common/params.h"
 
 int main(int argc, const char **argv)
 {
@@ -54,7 +55,7 @@ int main(int argc, const char **argv)
         server_address.sin_port = htons(atoi(argv[1]));
 
         // converto l'indirizzo IP nella network version
-        if (inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr) <= 0)
+        if (inet_pton(AF_INET, SERVER_IP, &server_address.sin_addr) <= 0)
         {
             printf("Indirizzo non valido\n");
             exit(EXIT_FAILURE);
@@ -74,7 +75,6 @@ int main(int argc, const char **argv)
             if (ret == 0)
             {
                 printf("\nIl server ha chiuso la connessione\n");
-                free(received_msg.payload);
                 break;
             }
             else if (ret == -1)

@@ -3,8 +3,6 @@
 
 #include "stddef.h"
 
-#define DEFAULT_PAYLOAD_SIZE 256
-
 /**
  * @brief Enumerazione che definisce i tipi di messaggi scambiati tra client e server
  *

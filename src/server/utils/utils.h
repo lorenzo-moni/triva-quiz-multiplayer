@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef SERVER_UTILS_H
+#define SERVER_UTILS_H
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -158,4 +158,4 @@ void update_ranking(RankingNode *node, Quiz *quiz);
 void remove_ranking(RankingNode *node, Quiz *quiz);
 void deallocate_rankings(Quiz *quiz);
 
-#endif // UTILS_H
+#endif // SERVER_UTILS_H

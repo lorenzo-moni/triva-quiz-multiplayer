@@ -25,8 +25,8 @@ fi
 
 
 # Apro due nuove finestre del terminale e lancio ./client 3000
-gnome-terminal -- bash -c "./client; exec bash"
-gnome-terminal -- bash -c "./client; exec bash"
+gnome-terminal -- bash -c "./client 8080; exec bash"
+gnome-terminal -- bash -c "./client 8080; exec bash"
 
 
 # Lancio il comando ./server nella scheda corrente

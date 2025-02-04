@@ -8,8 +8,7 @@
 #include <unistd.h>
 #include "utils/utils.h"
 #include "signal.h"
-
-#define PORT 8080
+#include "../common/params.h"
 
 int main()
 {
@@ -41,8 +40,8 @@ int main()
     // Configurazione del socket
 
     server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(PORT);
+    inet_pton(AF_INET, SERVER_IP, &server_address.sin_addr);
+    server_address.sin_port = htons(SERVER_PORT);
 
     // Binding del socket
     if (bind(context.server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
@@ -58,7 +57,7 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    printf("DEBUG: Server in ascolto sulla porta %d...\n", PORT);
+    printf("DEBUG: Server in ascolto sulla porta %d...\n", SERVER_PORT);
 
     FD_SET(context.server_fd, &context.masterfds);
     FD_SET(STDIN_FILENO, &context.masterfds); // Aggiungi lo stdin per monitorare l'input
@@ -114,6 +113,5 @@ int main()
     deallocate_quizzes(&context.quizzesInfo);
     // dealloco i clients
     deallocate_clients(&context.clientsInfo);
-
     return 0;
 }
