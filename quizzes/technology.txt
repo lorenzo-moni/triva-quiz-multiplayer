@@ -1,9 +1,9 @@
-Curiosità sulla tecnologia
+Tecnologia
 
 Domanda: Chi ha collegato per la prima volta l'Italia ad Internet?
 Risposte: luciano lenzini, lenzini
 
-Domanda: Qual è il sistema operativo per smartphone più diffuso?
+Domanda: Qual è il sistema operativo per smartphone più diffuso al mondo?
 Risposte: android
 
 Domanda: Chi è considerato il padre del computer moderno?
@@ -11,3 +11,6 @@ Risposte: alan turing, turing
 
 Domanda: Chi è stato il fondatore di Napster?
 Risposte: sean parker, parker, shawn fanning, fanning, parker e fanning, sean parker e shawn fanning
+
+Domanda: Chi è stato l'ideatore della funzione crittografica di hash MD5?
+Risposte: ronald rivest, rivest

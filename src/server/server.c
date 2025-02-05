@@ -64,9 +64,6 @@ int main()
     context.clientsInfo.max_fd = context.server_fd > STDIN_FILENO ? context.server_fd : STDERR_FILENO;
     Client *client;
 
-    // serve fare fare in modo che l'utente possa inserire una carattere alla volta sul terminale
-    enable_raw_mode();
-
     // Ciclo principale del server
     while (1)
     {
@@ -80,16 +77,17 @@ int main()
         if ((activity < 0) && (errno != EINTR))
         {
             perror("Select fallita");
-            disable_raw_mode();
             exit(EXIT_FAILURE);
         }
         // controllo se l'utente ha digitato il carattere "q" per terminare il server
         if (FD_ISSET(STDIN_FILENO, &context.readfds))
         {
-            char input;
-            read(STDIN_FILENO, &input, 1);
-            if (input == 'q')
-                break;
+            char buffer[DEFAULT_PAYLOAD_SIZE];
+            if (get_console_input(buffer, sizeof(buffer)) != -1)
+            {
+                if (buffer[0] == 'q' && buffer[1] == '\0')
+                    break;
+            }
         }
 
         // gestisco una nuova connessione sul server da parte di un utente
@@ -105,7 +103,7 @@ int main()
             client = client->next_node;
         }
     }
-    disable_raw_mode();
+
     printf("\nTerminazione del server\n");
     close(context.server_fd);
 

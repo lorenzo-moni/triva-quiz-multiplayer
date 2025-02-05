@@ -1,1 +1,0 @@
-# triva-quiz-multiplayer

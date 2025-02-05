@@ -15,7 +15,6 @@
 void show_menu();
 void handle_selected_quiz(Message *msg);
 void clear_input_buffer();
-int get_console_input(char *buffer, int buffer_size);
 
 // Connection
 

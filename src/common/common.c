@@ -35,26 +35,21 @@ void handle_malloc_error(void *ptr, const char *error_string)
  * @param payload puntatore ai dati del payload da inviare
  * @param payload_length lunghezza del payload in byte
  */
-void send_msg(int dest_fd, MessageType type, char *payload, size_t payload_length)
+int send_msg(int dest_fd, MessageType type, char *payload, size_t payload_length)
 {
     uint32_t net_msg_type = htonl(type);
     uint32_t net_msg_payload_length = htonl(payload_length);
 
     if (send(dest_fd, &net_msg_type, sizeof(net_msg_type), 0) == -1)
-    {
-        printf("Errore nell'invio del messaggio\n");
-        return;
-    }
+        return -1;
 
     if (send(dest_fd, &net_msg_payload_length, sizeof(net_msg_payload_length), 0) == -1)
-    {
-        printf("Errore nell'invio del messaggio\n");
-        return;
-    }
+        return -1;
 
     if (payload_length > 0)
         if (send(dest_fd, payload, payload_length, 0) == -1)
-            printf("Errore nell'invio del messaggio\n");
+            return -1;
+    return 1;
 }
 /**
  * @brief Riceve un messaggio da una sorgente specificata
@@ -120,6 +115,65 @@ int receive_msg(int source_fd, Message *msg)
     // se il messaggio usa text protocol vado ad aggiungere il terminatore di stringa al payload
     if (!(msg->type == MSG_RES_QUIZ_LIST || msg->type == MSG_RES_RANKING))
         msg->payload[msg->payload_length] = '\0';
+
+    return 1;
+}
+
+/**
+ * @brief Legge una stringa dall'input standard con gestione degli errori
+ *
+ * Questa funzione legge una linea di input dalla console e la memorizza nel buffer fornito.
+ * Se la lunghezza dell'input supera la dimensione del buffer, il buffer di input viene svuotato
+ * e viene restituito un errore. Gestisce anche il caso in cui l'utente non inserisce alcun valore.
+ *
+ * @param buffer puntatore al buffer in cui memorizzare l'input dell'utente
+ * @param buffer_size dimensione del buffer in byte
+ * @return restituisce 1 se l'input è stato letto correttamente, -1 in caso di errore
+ *
+ */
+
+/**
+ * @brief Pulisce il buffer di input standard.
+ *
+ * Questa funzione legge e scarta tutti i caratteri presenti nel buffer di input
+ * fino al carattere di nuova linea o fino a raggiungere l'End Of File.
+ *
+ * È utile per rimuovere eventuali caratteri residui nel buffer dopo operazioni di input,
+ * prevenendo comportamenti indesiderati in successive letture.
+ *
+ */
+void clear_input_buffer()
+{
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
+}
+
+int get_console_input(char *buffer, int buffer_size)
+{
+    if (fgets(buffer, buffer_size, stdin))
+    {
+        // trova la posizione del newline e la sostituisce con \0
+        size_t len = strcspn(buffer, "\n");
+        if (buffer[len] == '\n')
+            buffer[len] = '\0';
+        else
+        {
+            clear_input_buffer();
+            printf("Errore: il valore inserito supera la lunghezza massima di %d caratteri \n", buffer_size);
+            return -1;
+        }
+        if (len == 0)
+        {
+            printf("Errore: il valore inserito è vuoto\n");
+            return -1;
+        }
+    }
+    else
+    {
+        printf("Errore durante la lettura dell'input\n");
+        return -1;
+    }
 
     return 1;
 }

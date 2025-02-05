@@ -183,6 +183,7 @@ void handle_message(Message *msg)
  *
  *
  * @param server_fd file descriptor del socket del server
+ * @param msg puntatore al messaggio ricevuto
  */
 void handle_quiz_question(int server_fd, Message *msg)
 {

@@ -57,21 +57,6 @@ void show_completed_quizes(QuizzesInfo *quizzesInfo)
   }
 }
 
-void enable_raw_mode()
-{
-  struct termios term;
-  tcgetattr(STDIN_FILENO, &term);          // Ottieni le impostazioni correnti
-  term.c_lflag &= ~(ICANON | ECHO);        // Disabilita modalità canonica ed echo
-  tcsetattr(STDIN_FILENO, TCSANOW, &term); // Applica le modifiche
-}
-
-void disable_raw_mode()
-{
-  struct termios term;
-  tcgetattr(STDIN_FILENO, &term);          // Ottieni le impostazioni correnti
-  term.c_lflag |= (ICANON | ECHO);         // Ripristina modalità canonica ed echo
-  tcsetattr(STDIN_FILENO, TCSANOW, &term); // Applica le modifiche
-}
 /**
  * @brief Stampa a schermo la dashboard del server
  *
@@ -91,5 +76,5 @@ void show_dashboard(Context *context)
   show_scores(&context->quizzesInfo);
   show_completed_quizes(&context->quizzesInfo);
 
-  printf("\nPremere 'q' per terminare il server: \n");
+  printf("\nDigitare 'q' per terminare il server: \n");
 }

@@ -1,13 +1,16 @@
 Letteratura
 
-Domanda: Chi è l'autore del libro "1984"
-Risposte: george Orwell, orwell
+Domanda: Quale poeta italiano è autore della Divina Commedia?
+Risposte: dante alighieri, dante
 
-Domanda: Qual è il sistema operativo per smartphone più diffuso?
-Risposte: android
+Domanda: Quale romanzo descrive un regime totalitario controllato da "The Big Brother"?
+Risposte: 1984, millenovecentottantaquattro
 
-Domanda: Chi è considerato il padre del computer moderno?
-Risposte: alan turing, turing
+Domanda: Quale romanzo italiano inizia con la frase "Quel ramo del lago di Como, che volge a mezzogiorno..."?
+Risposte: i promessi sposi, promessi sposi
 
-Domanda: Chi è stato il fondatore di Napster?
-Risposte: sean parker, parker, shawn fanning, fanning, parker e fanning, sean parker e shawn fanning
+Domanda: Chi ha scritto Le notti bianche?
+Risposte: fëdor dostoevskij, dostoevskij
+
+Domanda: Chi scrisse la storia di una famiglia di pescatori originaria di Aci Trezza?
+Risposte: giovanni verga, verga

@@ -40,6 +40,7 @@ typedef struct Message
 
 void handle_malloc_error(void *ptr, const char *error_string);
 int receive_msg(int client_fd, Message *msg);
-void send_msg(int client_fd, MessageType type, char *payload, size_t payload_len);
+int send_msg(int client_fd, MessageType type, char *payload, size_t payload_len);
+int get_console_input(char *buffer, int buffer_size);
 
 #endif
