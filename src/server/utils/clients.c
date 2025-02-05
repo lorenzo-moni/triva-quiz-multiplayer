@@ -83,6 +83,9 @@ void remove_client(Client *node, ClientsInfo *clientsInfo)
     if (clientsInfo->clients_head == node)
         clientsInfo->clients_head = node->next_node;
 
+    if (clientsInfo->clients_tail == node)
+        clientsInfo->clients_tail = node->prev_node;
+
     if (node->prev_node != NULL)
         node->prev_node->next_node = node->next_node;
 
@@ -118,13 +121,13 @@ void deallocate_clients(ClientsInfo *clientsInfo)
  *
  * Questa funzione viene utilizzata per fare in modo da non generare buffer overflow nelle funzioni
  * send_quiz_list e send_ranking che usano il binary protocol e la serializzazione per inviare la lista dei quiz
- * e i ranking rispettivamente.abort
+ * e i ranking rispettivamente.
  *
  * La funzione va a controllare se la quantità di spazio rimasto nel buffer, dato da *pointer - *payload è sufficiente a contenere le informazioni che
- * vi si vogliono copiare dentro, di dimensione extra_size.abort
+ * vi si vogliono copiare dentro, di dimensione extra_size.
  *
  * Se questo spazio non necessario si duplica la dimensione del buffer finché non si riesce a coprire tutto il buffer e si rialloca il buffer payload
- * tramite realloc
+ * tramite realloc.
  *
  * @param payload puntatore a puntatore all'indirizzo iniziale del buffer
  * @param pointer puntatore a puntatore all'indirizzo correntemente in uso del buffer
@@ -148,13 +151,12 @@ void ensure_capacity(char **payload, char **pointer, size_t *buffer_size, size_t
         new_size *= 2;
 
     // salvo l'offset dato che dopo realloc *payload non sarà più valido
-    ptrdiff_t offset = *pointer - *payload;
     char *new_payload = (char *)realloc(*payload, new_size);
     handle_malloc_error(new_payload, "Errore nella riallocazione del payload");
 
     // ripristino i valori per la funzione chiamante
     *payload = new_payload;
-    *pointer = new_payload + offset;
+    *pointer = new_payload + used_size;
     *buffer_size = new_size;
 }
 
@@ -343,7 +345,10 @@ void handle_client_disconnection(Client *client, Context *context)
 
     // rimuovo tutte le classifiche del client
     for (uint32_t i = 0; i < context->quizzesInfo.total_quizzes; i++)
+    {
+        context->quizzesInfo.quizzes[i]->total_clients -= 1;
         remove_ranking(client->client_rankings[i], context->quizzesInfo.quizzes[i]);
+    }
 
     // aggiorno max_fd
     if (client->socket_fd == context->clientsInfo.max_fd)
@@ -359,7 +364,8 @@ void handle_client_disconnection(Client *client, Context *context)
         }
     }
 
-    context->clientsInfo.connected_clients--;
+    if (client->state != LOGIN)
+        context->clientsInfo.connected_clients--;
     remove_client(client, &context->clientsInfo);
 }
 /**
@@ -486,6 +492,7 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
     // Inizializzo le informazioni relative al ranking
     Quiz *selected_quiz = quizzesInfo->quizzes[selected_quiz_number - 1];
     RankingNode *new_node = create_ranking_node(client);
+    selected_quiz->total_clients += 1;
     client->client_rankings[client->current_quiz_id] = new_node;
 
     // inserisco il nodo nella lista doppiamente concatenata relativa al ranking del quiz
@@ -525,8 +532,7 @@ void send_ranking(Client *client, QuizzesInfo *quizzesInfo)
     // alloco le strutture dati necessarie
     char *pointer = payload;
     size_t string_len;
-    uint32_t net_string_len, net_client_score, net_clients_per_quiz, clients_per_quiz;
-    char *quiz_total_clients_pointer;
+    uint32_t net_string_len, net_client_score, net_clients_per_quiz;
     int payload_size;
 
     // inserisco il numero totale di quizzes per cui dobbiamo stampare la classifica
@@ -540,18 +546,16 @@ void send_ranking(Client *client, QuizzesInfo *quizzesInfo)
     for (uint32_t i = 0; i < quizzesInfo->total_quizzes; i++)
     {
         Quiz *quiz = quizzesInfo->quizzes[i];
-        // memorizzo la posizione dove andare ad inserire al termine del conteggio il numero totale
-        // di utenti che sono in classifica per il quiz corrente
-        quiz_total_clients_pointer = pointer;
+        // inserisco il numero di clients in classifica per il quiz
+        net_clients_per_quiz = htonl(quiz->total_clients);
         ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t));
+        memcpy(pointer, &net_clients_per_quiz, sizeof(uint32_t));
         pointer += sizeof(uint32_t);
 
-        clients_per_quiz = 0;
         RankingNode *current = quiz->ranking_head;
         // vado a scorrere la lista della classifica relativa al quiz
         while (current)
         {
-            clients_per_quiz += 1;
             string_len = strlen(current->client->nickname);
             net_string_len = htonl(string_len);
 
@@ -573,12 +577,7 @@ void send_ranking(Client *client, QuizzesInfo *quizzesInfo)
             pointer += sizeof(uint32_t);
             current = current->next_node;
         }
-        // a questo punto inserisco il numero totale di client in classifica per il quiz corrente
-        // nella posizione del buffer salvata precedentemente
-        net_clients_per_quiz = htonl(clients_per_quiz);
-        memcpy(quiz_total_clients_pointer, &net_clients_per_quiz, sizeof(uint32_t));
     }
-
     payload_size = pointer - payload;
     // invio il payload al client in un messaggio MSG_RES_RANKING
     send_msg(client->socket_fd, MSG_RES_RANKING, payload, payload_size);
@@ -619,14 +618,23 @@ void handle_client(Client *client, Context *context)
     int res = receive_msg(client->socket_fd, &received_msg);
     if (res == 0)
     {
-        printf("Il client ha chiuso la connessione in modo brusco\n");
+        printf("Il client ha chiuso la connessione in modo ordinato\n");
         handle_client_disconnection(client, context);
         return;
     }
     else if (res == -1)
     {
-        printf("Si è verificato un errore durante la ricezione di un messaggio\n");
-        exit(EXIT_FAILURE);
+        if (errno == ECONNRESET || errno == ETIMEDOUT || errno == EPIPE)
+        {
+            printf("Il client ha chiuso la connessione in modo anomalo\n");
+            handle_client_disconnection(client, context);
+            return;
+        }
+        else
+        {
+            printf("Errore critico nel server\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     switch (received_msg.type)

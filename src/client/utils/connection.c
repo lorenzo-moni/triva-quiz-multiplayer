@@ -96,8 +96,24 @@ void display_quiz_list(Message *msg)
  *
  * @param msg puntatore al messaggio nel cui payload si trova la classifica serializzata
  */
+void print_hex(const char *label, const void *data, size_t size)
+{
+    const unsigned char *byte = (const unsigned char *)data;
+    printf("%s (%zu bytes):\n", label, size);
+
+    for (size_t i = 0; i < size; i++)
+    {
+        printf("%02X ", byte[i]);
+        if ((i + 1) % 16 == 0) // Andiamo a capo ogni 16 byte per leggibilità
+            printf("\n");
+    }
+    printf("\n");
+}
+
 void handle_rankings(Message *msg)
 {
+    print_hex("Payload ricevuto", msg->payload, msg->payload_length);
+
     char *pointer = msg->payload;
     uint32_t clients_per_quiz, quizzes_num, client_score, string_len;
     uint32_t net_string_len, net_client_score, net_clients_per_quiz, net_quizzes_num;

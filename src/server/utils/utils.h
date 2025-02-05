@@ -82,6 +82,7 @@ typedef struct Quiz
     char *name;                       /**< Nome del quiz. */
     QuizQuestion **questions;         /**< Array di puntatori alle domande del quiz. */
     uint32_t total_questions;         /**< Numero totale di domande nel quiz. */
+    uint32_t total_clients;           /**< Numero di client che sono in classifica */
     struct RankingNode *ranking_head; /**< Puntatore alla testa della lista della classifica. */
     struct RankingNode *ranking_tail; /**< Puntatore alla coda della lista della classifica. */
 } Quiz;

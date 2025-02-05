@@ -152,6 +152,9 @@ void remove_ranking(RankingNode *node, Quiz *quiz)
     if (quiz->ranking_head == node)
         quiz->ranking_head = node->next_node;
 
+    if (quiz->ranking_tail == node)
+        quiz->ranking_tail = node->prev_node;
+
     if (node->prev_node != NULL)
         node->prev_node->next_node = node->next_node;
 

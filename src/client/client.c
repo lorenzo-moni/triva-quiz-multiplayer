@@ -7,6 +7,7 @@
 #include "signal.h"
 #include "../common/common.h"
 #include "../common/params.h"
+#include "errno.h"
 
 int main(int argc, const char **argv)
 {
@@ -77,10 +78,19 @@ int main(int argc, const char **argv)
                 printf("\nIl server ha chiuso la connessione\n");
                 break;
             }
+
             else if (ret == -1)
             {
-                printf("Si è verificato un'errore nella ricezione del messaggio dal server\n");
-                exit(EXIT_FAILURE);
+                if (errno == ECONNRESET || errno == ETIMEDOUT || errno == EPIPE)
+                {
+                    printf("Il server ha chiuso la connessione in modo anomalo\n");
+                    break;
+                }
+                else
+                {
+                    printf("Errore critico\n");
+                    exit(EXIT_FAILURE);
+                }
             }
 
             switch (received_msg.type)

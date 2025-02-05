@@ -80,6 +80,7 @@ Quiz *load_quiz_from_file(const char *file_path)
     quiz->questions = NULL;
     quiz->ranking_head = NULL;
     quiz->ranking_tail = NULL;
+    quiz->total_clients = 0;
 
     // leggo la prima linea, relativa al nome del quiz
     if ((read = getline(&lineptr, &len, file)) != -1)

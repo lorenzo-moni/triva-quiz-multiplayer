@@ -61,8 +61,8 @@ int main()
 
     FD_SET(context.server_fd, &context.masterfds);
     FD_SET(STDIN_FILENO, &context.masterfds); // Aggiungi lo stdin per monitorare l'input
-    context.clientsInfo.max_fd = context.server_fd > STDIN_FILENO ? context.server_fd : STDERR_FILENO;
-    Client *client;
+    context.clientsInfo.max_fd = (context.server_fd > STDIN_FILENO) ? context.server_fd : STDIN_FILENO;
+    Client *client, *next;
 
     // Ciclo principale del server
     while (1)
@@ -83,10 +83,14 @@ int main()
         if (FD_ISSET(STDIN_FILENO, &context.readfds))
         {
             char buffer[DEFAULT_PAYLOAD_SIZE];
-            if (get_console_input(buffer, sizeof(buffer)) != -1)
+            if (get_console_input(buffer, sizeof(buffer)) == -1)
             {
-                if (buffer[0] == 'q' && buffer[1] == '\0')
-                    break;
+                // Se c'è un errore o EOF, rimuovo STDIN dal master set
+                FD_CLR(STDIN_FILENO, &context.masterfds);
+            }
+            else if (buffer[0] == 'q' && buffer[1] == '\0')
+            {
+                break;
             }
         }
 
@@ -98,9 +102,10 @@ int main()
         client = context.clientsInfo.clients_head;
         while (client)
         {
+            next = client->next_node;
             if (FD_ISSET(client->socket_fd, &context.readfds))
                 handle_client(client, &context);
-            client = client->next_node;
+            client = next;
         }
     }
 
