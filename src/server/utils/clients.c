@@ -346,7 +346,6 @@ void handle_client_disconnection(Client *client, Context *context)
     // rimuovo tutte le classifiche del client
     for (uint32_t i = 0; i < context->quizzesInfo.total_quizzes; i++)
     {
-        context->quizzesInfo.quizzes[i]->total_clients -= 1;
         remove_ranking(client->client_rankings[i], context->quizzesInfo.quizzes[i]);
     }
 

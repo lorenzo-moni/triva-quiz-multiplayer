@@ -149,6 +149,8 @@ void remove_ranking(RankingNode *node, Quiz *quiz)
     if (quiz->ranking_head == NULL)
         return;
 
+    quiz->total_clients -= 1;
+
     if (quiz->ranking_head == node)
         quiz->ranking_head = node->next_node;
 
