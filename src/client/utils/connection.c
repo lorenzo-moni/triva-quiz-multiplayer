@@ -133,12 +133,12 @@ void handle_rankings(Message *msg)
  * @brief Gestisce la selezione del quiz da parte del client
  *
  * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_RES_QUIZ_LIST, tramite il quale il server comunica all'utente la lista dei quiz in formato serializzato,
- * della cui deserializzazione e stampa a schermo si occupa la funzione handle_quiz_selection
+ * della cui deserializzazione e stampa a schermo si occupa la funzione display_quiz_list
  *
  * La funzione permette all'utente di effettuare una scelta, in particolare il comportamento cambia a seconda del valore digitato dal client
  *  - ENDQUIZ: invio di un messaggio MSG_DISCONNECT che porta il server a deallocare le strutture del client e chiudere la connessione
  *  - SHOWSCORE: invio di un messaggio MSG_REQ_RANKING che porta il server a rispondere con un messaggio di tipo MSG_RES_RANKING e dunque all'invio della classifica
- *  - ELSE: invio di un messaggio MSG_QUIZ_SELECT con payload dato dal valore inserito che permette al client di selezionare il quiz a cui vuole partecipare
+ *  - ELSE: invio di un messaggio MSG_QUIZ_SELECT con payload dato dal valore inserito che permette al client di selezionare il quiz a cui vuole partecipare usando binary protocol
  *
  *
  * @param server_fd file descriptor del socket del server
@@ -146,19 +146,44 @@ void handle_rankings(Message *msg)
  */
 void handle_quiz_selection(int server_fd, Message *msg)
 {
-    display_quiz_list(msg);
-
     char answer[DEFAULT_PAYLOAD_SIZE];
-    do
-        printf("La tua scelta: ");
-    while (get_console_input(answer, sizeof(answer)) == -1);
+    char *endptr;
+    uint16_t selected_quiz_number, net_selected_quiz_number;
+    while (1)
+    {
+        display_quiz_list(msg);
 
-    if (strcmp(answer, ENDQUIZ) == 0)
-        send_msg(server_fd, MSG_DISCONNECT, "", 0);
-    else if (strcmp(answer, SHOWSCORE) == 0)
-        send_msg(server_fd, MSG_REQ_RANKING, "", 0);
-    else
-        send_msg(server_fd, MSG_QUIZ_SELECT, answer, strlen(answer));
+        do
+            printf("La tua scelta: ");
+        while (get_console_input(answer, sizeof(answer)) == -1);
+
+        if (strcmp(answer, ENDQUIZ) == 0)
+        {
+            send_msg(server_fd, MSG_DISCONNECT, "", 0);
+            break;
+        }
+        else if (strcmp(answer, SHOWSCORE) == 0)
+        {
+            send_msg(server_fd, MSG_REQ_RANKING, "", 0);
+            break;
+        }
+
+        // strtoul tenta di convertire una stringa ricevuta in un unsigned long int in base 10
+        // endptr viene impostato all'ultimo valore non convertito, dunque può essere usato per
+        // capire se non è stato possibile effettuare la conversione
+
+        selected_quiz_number = (uint16_t)strtoul(answer, &endptr, 10);
+
+        // Se il valore può essere convertito lo inviamo al server
+        if (*endptr == '\0')
+        {
+            net_selected_quiz_number = htons(selected_quiz_number);
+            send_msg(server_fd, MSG_QUIZ_SELECT, (char *)&net_selected_quiz_number, sizeof(net_selected_quiz_number));
+            break;
+        }
+        // altrimenti stampiamo un messaggio di errore dato dalla conversione errata
+        printf("\nQuiz selezionato non valido\n");
+    }
 }
 /**
  * @brief Gestisce la ricezione di un messaggio informativo

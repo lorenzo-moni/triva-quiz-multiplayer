@@ -451,20 +451,17 @@ void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
  */
 void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 {
-    // strtoul tenta di convertire una stringa ricevuta in un unsigned long int in base 10
-    // endptr viene impostato all'ultimo valore non convertito, dunque può essere usato per
-    // capire se non è stato possibile effettuare la conversione
-    char *endptr;
-    uint16_t selected_quiz_number = (uint16_t)strtoul(msg->payload, &endptr, 10);
+    uint16_t net_selected_quiz_number, selected_quiz_number;
+    memcpy(&net_selected_quiz_number, msg->payload, sizeof(net_selected_quiz_number));
+    selected_quiz_number = ntohs(net_selected_quiz_number);
 
     // Gestisco le possibili situazioni di errore
 
     // Il quiz indicato non è disponibile
-    if (*endptr != '\0' || selected_quiz_number > quizzesInfo->total_quizzes || selected_quiz_number <= 0)
+    if (selected_quiz_number > quizzesInfo->total_quizzes || selected_quiz_number == 0)
     {
         char *message = "Quiz selezionato non valido";
         send_msg(client->socket_fd, MSG_INFO, message, strlen(message));
-
         send_quiz_list(client, quizzesInfo);
         return;
     }

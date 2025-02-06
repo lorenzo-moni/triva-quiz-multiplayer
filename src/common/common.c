@@ -143,7 +143,7 @@ int receive_msg(int source_fd, Message *msg)
     msg->payload = NULL;
 
     // aggiungo lo spazio per il terminatore di stringa solamente nei messaggi che usano text protocol
-    if (msg->type == MSG_RES_QUIZ_LIST || msg->type == MSG_RES_RANKING)
+    if (msg->type == MSG_RES_QUIZ_LIST || msg->type == MSG_RES_RANKING || msg->type == MSG_QUIZ_SELECT)
     {
         // se msg->payload_length è nulla si è inviato un messaggio con solo il tipo, non occorre fare receive
         if (msg->payload_length == 0)
@@ -170,7 +170,7 @@ int receive_msg(int source_fd, Message *msg)
         return bytes_received;
     }
     // se il messaggio usa text protocol vado ad aggiungere il terminatore di stringa al payload
-    if (!(msg->type == MSG_RES_QUIZ_LIST || msg->type == MSG_RES_RANKING))
+    if (!(msg->type == MSG_RES_QUIZ_LIST || msg->type == MSG_RES_RANKING || msg->type == MSG_QUIZ_SELECT))
         msg->payload[msg->payload_length] = '\0';
 
     return 1;

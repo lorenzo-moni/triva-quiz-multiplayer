@@ -16,7 +16,7 @@ typedef enum MessageType
     MSG_OK_NICKNAME,   /**< Messaggio inviato dal server per indicare che il nickname scelto è corretto */
     MSG_REQ_QUIZ_LIST, /**< Messaggio inviato dal client per richiedere la lista dei quiz */
     MSG_RES_QUIZ_LIST, /**< Messaggio inviato dal server per inoltrare la lista dei quiz [BINARY PROTOCOL] */
-    MSG_QUIZ_SELECT,   /**< Messaggio inviato dal client per selezionare il quiz */
+    MSG_QUIZ_SELECT,   /**< Messaggio inviato dal client per selezionare il quiz [BINARY PROTOCOL]*/
     MSG_QUIZ_SELECTED, /**< Messaggio inviato dal server al client per confermare il quiz selezionato */
     MSG_QUIZ_QUESTION, /**< Messaggio inviato dal server per inoltrare la domanda del quiz */
     MSG_QUIZ_ANSWER,   /**< Messaggio inviato dal client con la risposta alla domanda */
