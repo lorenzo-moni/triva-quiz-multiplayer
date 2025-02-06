@@ -84,7 +84,7 @@ void display_quiz_list(Message *msg)
 /**
  * @brief Gestisce la deserializzazione e la visualizzazione della classifica
  *
- * Questa funzione si occupa di effettuare la deserializzazione utilizzando binary protocol
+ * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_RES_RANKING e si occupa di effettuare la deserializzazione utilizzando binary protocol
  * della classifica per ogni quiz ricevuta dal server.
  *
  * In particolare utilizzo la funzione ntohs per confertire da network byte order a host byte order

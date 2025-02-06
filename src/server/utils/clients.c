@@ -11,7 +11,6 @@
  * @brief Gestisce l'inizializzazione delle informazioni relative ai clients che si possono connettere al sistema
  *
  * @param clientsInfo puntatore alla struttura con le informazioni sui clients
- * @return struttura di tipo Quiz relativa al file file_path
  */
 void init_clients_info(ClientsInfo *clientsInfo)
 {
@@ -150,7 +149,7 @@ void ensure_capacity(char **payload, char **pointer, size_t *buffer_size, size_t
     while (new_size < required_size)
         new_size *= 2;
 
-    // salvo l'offset dato che dopo realloc *payload non sarà più valido
+    // rialloco il payload
     char *new_payload = (char *)realloc(*payload, new_size);
     handle_malloc_error(new_payload, "Errore nella riallocazione del payload");
 
@@ -213,7 +212,7 @@ void handle_new_client_connection(Context *context)
 /**
  * @brief Invia al client la lista dei quiz disponibili
  *
- * Questa funzione si occupa di effettuare la serializzazione utilizzando binary protocol
+ * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_REQ_QUIZ_LIST e si occupa di effettuare la serializzazione utilizzando binary protocol
  * della lista dei quiz disponibili e di inviarli al client
  *
  * In particolare utilizzo la funzione htons per confertire da host byte order a network byte order
@@ -238,14 +237,13 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
     char *pointer = payload;
     size_t string_len;
     uint16_t net_string_len;
+    Quiz *quiz;
 
     // inserisco nel buffer il numero totale di quiz disponibili assicurandomi che all'interno del buffer ci sia abbastanza spazio
     uint16_t net_strings_num = htons(quizzesInfo->total_quizzes);
     ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t));
     memcpy(pointer, &net_strings_num, sizeof(uint16_t));
     pointer += sizeof(uint16_t);
-
-    Quiz *quiz;
 
     for (uint16_t i = 0; i < quizzesInfo->total_quizzes; i++)
     {
@@ -288,14 +286,6 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *clientsInfo)
 {
     char *selected_nickname = received_msg->payload;
-    if (!received_msg->payload_length)
-    {
-        char *message = "Il nickname non può essere vuoto";
-        send_msg(client->socket_fd, MSG_INFO, message, strlen(message));
-        request_client_nickname(client->socket_fd);
-        return;
-    }
-
     bool found = 0;
 
     // eseguo una ricerca lineare tra i client a cui è già stato associato un nickname
@@ -417,8 +407,11 @@ bool verify_quiz_answer(char *answer, QuizQuestion *question)
 void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 {
     char *user_answer = msg->payload;
+    // prelevo il RankingNode relativo al quiz per cui il client ha fornito una risposta
     RankingNode *current_ranking = client->client_rankings[client->current_quiz_id];
+    // preleve il quiz che sta giocando il client
     Quiz *playing_quiz = quizzesInfo->quizzes[client->current_quiz_id];
+    // prelevo la domanda corrente a cui ha risposto il client
     QuizQuestion *current_question = playing_quiz->questions[current_ranking->current_question];
     char *payload;
 
@@ -436,9 +429,10 @@ void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
     send_msg(client->socket_fd, MSG_INFO, payload, strlen(payload));
 
     current_ranking->current_question += 1;
+    // se il client ha terminato il quiz invio la lista dei quiz disponibili, altrimenti la domanda successiva
     if (current_ranking->current_question == playing_quiz->total_questions)
     {
-        current_ranking->is_quiz_completed = 1;
+        current_ranking->is_quiz_completed = true;
         payload = "Hai terminato il quiz";
         send_msg(client->socket_fd, MSG_INFO, payload, strlen(payload));
         client->state = SELECTING_QUIZ;
@@ -490,8 +484,8 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
 
     // Inizializzo le informazioni relative al ranking
     Quiz *selected_quiz = quizzesInfo->quizzes[selected_quiz_number - 1];
-    RankingNode *new_node = create_ranking_node(client);
     selected_quiz->total_clients += 1;
+    RankingNode *new_node = create_ranking_node(client);
     client->client_rankings[client->current_quiz_id] = new_node;
 
     // inserisco il nodo nella lista doppiamente concatenata relativa al ranking del quiz
@@ -508,10 +502,10 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
 /**
  * @brief Invia al client la classifica per ogni quiz
  *
- * Questa funzione si occupa di effettuare la serializzazione utilizzando binary protocol
- * della classifica dei clients per ogni quiz
+ * Questa funzione viene invocata in seguito alla ricezione di un messaggio di tipo MSG_REQ_RANKING dal client e
+ * si occupa di effettuare la serializzazione utilizzando binary protocol della classifica dei clients per ogni quiz e di inviarla al client.
  *
- * In particolare utilizzo la funzione htons per confertire da host byte order a network byte order
+ * In particolare utilizzo la funzione htons per convertire i dati da host byte order a network byte order
  * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità
  *
  * I dati relativi al ranking dei quiz verranno serializzati secondo questo formato binary protocol

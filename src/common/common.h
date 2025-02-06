@@ -22,7 +22,7 @@ typedef enum MessageType
     MSG_QUIZ_ANSWER,   /**< Messaggio inviato dal client con la risposta alla domanda */
     MSG_REQ_RANKING,   /**< Messaggio inviato dal client al server per richiedere la classifica */
     MSG_RES_RANKING,   /**< Messaggio inviato dal server al client per la classifica [BINARY PROTOCOL] */
-    MSG_DISCONNECT,    /**< Messaggio inviato dal client o dal server per indicare la disconnessione */
+    MSG_DISCONNECT,    /**< Messaggio inviato dal client al server per indicare la disconnessione */
     MSG_INFO           /**< Messaggio inviato dal server con un messaggio informativo per il client */
 } MessageType;
 

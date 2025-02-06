@@ -112,7 +112,7 @@ int send_msg(int dest_fd, MessageType type, char *payload, size_t payload_length
  * @brief Riceve un messaggio da una sorgente specificata
  *
  * Questa funzione riceve un messaggio dal client identificato dal file descriptor fornito.
- * I valori numerici vengonoù convertiti da host byte order a network byte order dell'host dopo la ricezione.
+ * I valori numerici vengono convertiti da network byte order a host byte order dopo la ricezione.
  *
  * In particolare si gestisce l'aggiunta o meno del terminatore di stringa nel caso in cui il payload del messaggio
  * sia di tipo text protocol o binary protocol come nel caso di MSG_RES_QUIZ_LIST e MSG_RES_RANKING.
@@ -120,7 +120,7 @@ int send_msg(int dest_fd, MessageType type, char *payload, size_t payload_length
  * @param source_fd file descriptor da cui ricevere il messaggio
  * @param msg Puntatore alla struttura Message in cui memorizzare i dati ricevuti
  *
- * @return Un valore positivo se la ricezione ha avuto successo, 0 se il client ha chiuso la connessione,
+ * @return 1 se la ricezione ha avuto esito positivo, 0 se il client ha chiuso la connessione,
  *         o un valore negativo in caso di errore.
  */
 int receive_msg(int source_fd, Message *msg)
@@ -177,19 +177,6 @@ int receive_msg(int source_fd, Message *msg)
 }
 
 /**
- * @brief Legge una stringa dall'input standard con gestione degli errori
- *
- * Questa funzione legge una linea di input dalla console e la memorizza nel buffer fornito.
- * Se la lunghezza dell'input supera la dimensione del buffer, il buffer di input viene svuotato
- * e viene restituito un errore. Gestisce anche il caso in cui l'utente non inserisce alcun valore.
- *
- * @param buffer puntatore al buffer in cui memorizzare l'input dell'utente
- * @param buffer_size dimensione del buffer in byte
- * @return restituisce 1 se l'input è stato letto correttamente, -1 in caso di errore
- *
- */
-
-/**
  * @brief Pulisce il buffer di input standard.
  *
  * Questa funzione legge e scarta tutti i caratteri presenti nel buffer di input
@@ -206,6 +193,18 @@ void clear_input_buffer()
         ;
 }
 
+/**
+ * @brief Legge una stringa dall'input standard con gestione degli errori
+ *
+ * Questa funzione legge una linea di input dalla console e la memorizza nel buffer fornito.
+ * Se la lunghezza dell'input supera la dimensione del buffer, il buffer di input viene svuotato
+ * e viene restituito un errore. Gestisce anche il caso in cui l'utente non inserisce alcun valore.
+ *
+ * @param buffer puntatore al buffer in cui memorizzare l'input dell'utente
+ * @param buffer_size dimensione del buffer in byte
+ * @return restituisce 1 se l'input è stato letto correttamente, -1 in caso di errore
+ *
+ */
 int get_console_input(char *buffer, int buffer_size)
 {
     if (fgets(buffer, buffer_size, stdin))

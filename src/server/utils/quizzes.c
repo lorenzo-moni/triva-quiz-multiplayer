@@ -32,7 +32,7 @@ int get_directory_total_files(DIR *directory)
         file_count++;
     }
     // vado a riportare il puntatore del flusso nella directory all'inizio dato che le voci di questa directory potrebbero
-    // essre re iterate successivamente tramite readdir
+    // essere reiterate successivamente tramite readdir
 
     rewinddir(directory);
     return file_count;
@@ -57,11 +57,7 @@ Quiz *load_quiz_from_file(const char *file_path)
     }
     // alloco il quiz
     Quiz *quiz = (Quiz *)malloc(sizeof(Quiz));
-    if (!quiz)
-    {
-        printf("Errore di allocazione memoria per il quiz\n");
-        exit(EXIT_FAILURE);
-    }
+    handle_malloc_error(quiz, "Errore di allocazione memoria per il quiz");
 
     // puntatore alla linea utilizzato da getline
     char *lineptr = NULL;
@@ -103,12 +99,7 @@ Quiz *load_quiz_from_file(const char *file_path)
 
     // alloco gli array per domande e risposte
     quiz->questions = (QuizQuestion **)malloc(question_count * sizeof(QuizQuestion *));
-
-    if (!quiz->questions)
-    {
-        printf("Errore nell'allocazione della memoria per le domande del quiz\n");
-        exit(EXIT_FAILURE);
-    }
+    handle_malloc_error(quiz->questions, "Errore nell'allocazione della memoria per le domande del quiz");
 
     // torno all'inizio del file per leggere le domande e risposte
     rewind(file);
@@ -139,11 +130,7 @@ Quiz *load_quiz_from_file(const char *file_path)
         }
         // alloco l'oggetto relativo alla domanda corrente
         current_question = (QuizQuestion *)malloc(sizeof(QuizQuestion));
-        if (current_question == NULL)
-        {
-            printf("Errore nell'allocazione della domanda del quiz\n");
-            exit(EXIT_FAILURE);
-        }
+        handle_malloc_error(current_question, "Errore nell'allocazione della domanda del quiz");
         current_question->question = strdup(lineptr + 9);
         current_question->total_answers = 0;
 
