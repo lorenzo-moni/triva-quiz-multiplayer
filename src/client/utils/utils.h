@@ -14,7 +14,6 @@
 
 void show_menu();
 void handle_selected_quiz(Message *msg);
-void clear_input_buffer();
 
 // Connection
 

@@ -164,7 +164,7 @@ void ensure_capacity(char **payload, char **pointer, size_t *buffer_size, size_t
  *
  * Questa funzione si occupa di inviare al client con socket client_fd un messaggio di tipo MSG_REQ_NICKNAME
  *
- * @param clientsInfo puntatore alla struttura che contiene le informazioni sui clients
+ * @param client_fd file descriptor del client a cui richiedere l'username
  */
 void request_client_nickname(int client_fd)
 {
@@ -213,14 +213,14 @@ void handle_new_client_connection(Context *context)
  * @brief Invia al client la lista dei quiz disponibili
  *
  * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_REQ_QUIZ_LIST e si occupa di effettuare la serializzazione utilizzando binary protocol
- * della lista dei quiz disponibili e di inviarli al client
+ * della lista dei quiz disponibili e di inviarli al client.
  *
  * In particolare utilizzo la funzione htons per confertire da host byte order a network byte order
- * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità
+ * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità.
  *
- * I dati relativi ai quiz disponibili verranno serializzati secondo questo formato binary
+ * I dati relativi ai quiz disponibili verranno serializzati secondo questo formato binary:
  * (numero quizzes) [(lunghezza nome)(nome)] [(lunghezza nome)(nome)] [...]
- * dove le parentesi danno un'idea del livello di annidamento e chiaramente non sono incluse nei dati inviati
+ * dove le parentesi danno un'idea del livello di annidamento e chiaramente non sono incluse nei dati inviati.
  *
  *
  * @param client puntatore al client a cui inviare la lista
@@ -335,9 +335,7 @@ void handle_client_disconnection(Client *client, Context *context)
 
     // rimuovo tutte le classifiche del client
     for (uint16_t i = 0; i < context->quizzesInfo.total_quizzes; i++)
-    {
         remove_ranking(client->client_rankings[i], context->quizzesInfo.quizzes[i]);
-    }
 
     // aggiorno max_fd
     if (client->socket_fd == context->clientsInfo.max_fd)

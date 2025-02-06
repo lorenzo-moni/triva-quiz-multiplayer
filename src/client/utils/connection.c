@@ -142,6 +142,7 @@ void handle_rankings(Message *msg)
  *
  *
  * @param server_fd file descriptor del socket del server
+ * @param msg puntatore al messaggio nel cui payload è contenuta la serializzazione della lista dei quiz
  */
 void handle_quiz_selection(int server_fd, Message *msg)
 {
