@@ -24,20 +24,76 @@ void handle_malloc_error(void *ptr, const char *error_string)
         exit(EXIT_FAILURE);
     }
 }
+
+/**
+ * @brief Invia tutti i byte necessari sul socket
+ *
+ * Questa funzione viene utilizzata in caso la send non riesca ad inviare tutti i dati sul socket e permette di inviare dati
+ * finché tutti i dati non sono stati inoltrati.
+ * È particolarmente utile quando il payload è di grandi dimensioni.
+ *
+ * @param dest_fd file descriptor a cui inviare i dati
+ * @param buffer buffer da inviare
+ * @param length lunghezza del buffer in byte
+ * @return il numero di byte inviati, oppure -1 in caso di errore
+ */
+ssize_t send_all(int dest_fd, char *buffer, size_t length)
+{
+    size_t total_sent = 0;
+    ssize_t bytes_sent;
+
+    while (total_sent < length)
+    {
+        bytes_sent = send(dest_fd, buffer + total_sent, length - total_sent, 0);
+        if (bytes_sent <= 0)
+            return bytes_sent;
+        total_sent += bytes_sent;
+    }
+    return total_sent;
+}
+
+/**
+ * @brief Riceve tutti i byte necessari sul socket
+ *
+ * Questa funzione viene utilizzata in caso la recv non riesca ad ricevere tutti i dati sul socket e permette di ricevere dati
+ * finché tutti i dati non sono stati ricevuti.
+ * È particolarmente utile quando il payload è di grandi dimensioni.
+ *
+ * @param source_fd file descriptor da cui ricevere il messaggio
+ * @param buffer buffer da inviare
+ * @param length lunghezza del buffer in byte
+ * @return il numero di byte ricevuti, oppure -1 in caso di errore
+ */
+ssize_t receive_all(int source_fd, char *buffer, size_t length)
+{
+    size_t total_received = 0;
+    ssize_t bytes_received;
+
+    while (total_received < length)
+    {
+        bytes_received = recv(source_fd, buffer + total_received, length - total_received, 0);
+        if (bytes_received <= 0)
+            return bytes_received;
+        total_received += bytes_received;
+    }
+    return total_received;
+}
 /**
  * @brief Invia un messaggio alla destinazione specificata
  *
  * Questa funzione invia un messaggio al client identificato dal file descriptor fornito.
  * I valori numerici vengono convertiti in network byte order prima dell'invio.
  *
- * @param client_fd file descriptor a cui inviare il messaggio
+ * @param dest_fd file descriptor a cui inviare il messaggio
  * @param type tipo del messaggio da inviare
  * @param payload puntatore ai dati del payload da inviare
  * @param payload_length lunghezza del payload in byte
+ *
+ * @return 1 nel caso l'invio abbia avuto successo e -1 nel caso di errore
  */
 int send_msg(int dest_fd, MessageType type, char *payload, size_t payload_length)
 {
-    uint32_t net_msg_type = htonl(type);
+    uint8_t net_msg_type = type;
     uint32_t net_msg_payload_length = htonl(payload_length);
 
     if (send(dest_fd, &net_msg_type, sizeof(net_msg_type), 0) == -1)
@@ -47,10 +103,11 @@ int send_msg(int dest_fd, MessageType type, char *payload, size_t payload_length
         return -1;
 
     if (payload_length > 0)
-        if (send(dest_fd, payload, payload_length, 0) == -1)
+        if (send_all(dest_fd, payload, payload_length) == -1)
             return -1;
     return 1;
 }
+
 /**
  * @brief Riceve un messaggio da una sorgente specificata
  *
@@ -68,14 +125,14 @@ int send_msg(int dest_fd, MessageType type, char *payload, size_t payload_length
  */
 int receive_msg(int source_fd, Message *msg)
 {
-    uint32_t net_msg_type;
+    uint8_t net_msg_type;
     uint32_t net_msg_payload_length;
 
     ssize_t bytes_received = recv(source_fd, &net_msg_type, sizeof(net_msg_type), 0);
     if (bytes_received <= 0)
         return bytes_received;
 
-    msg->type = ntohl(net_msg_type);
+    msg->type = net_msg_type;
 
     bytes_received = recv(source_fd, &net_msg_payload_length, sizeof(net_msg_payload_length), 0);
 
@@ -106,7 +163,7 @@ int receive_msg(int source_fd, Message *msg)
         }
     }
 
-    bytes_received = recv(source_fd, msg->payload, msg->payload_length, 0);
+    bytes_received = recv_all(source_fd, msg->payload, msg->payload_length);
     if (bytes_received <= 0)
     {
         free(msg->payload);
