@@ -267,7 +267,7 @@ int load_quizzes_from_directory(const char *directory_path, QuizzesInfo *quizzes
  */
 void deallocate_quizzes(QuizzesInfo *quizzesInfo)
 {
-    for (uint32_t i = 0; i < quizzesInfo->total_quizzes; i++)
+    for (uint16_t i = 0; i < quizzesInfo->total_quizzes; i++)
     {
         Quiz *quiz = quizzesInfo->quizzes[i];
         if (!quiz)
@@ -277,7 +277,7 @@ void deallocate_quizzes(QuizzesInfo *quizzesInfo)
         // dealloco la lista doppiamente concatenata relativa alla classifica del quiz
         deallocate_rankings(quiz);
 
-        for (uint32_t j = 0; j < quiz->total_questions; j++)
+        for (uint16_t j = 0; j < quiz->total_questions; j++)
         {
             QuizQuestion *question = quiz->questions[j];
             if (!question)

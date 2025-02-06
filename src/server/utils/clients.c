@@ -216,8 +216,8 @@ void handle_new_client_connection(Context *context)
  * Questa funzione si occupa di effettuare la serializzazione utilizzando binary protocol
  * della lista dei quiz disponibili e di inviarli al client
  *
- * In particolare utilizzo la funzione htonl per confertire da host byte order a network byte order
- * e utilizzo i tipi standardizzati uint32_t per garantire la portabilità
+ * In particolare utilizzo la funzione htons per confertire da host byte order a network byte order
+ * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità
  *
  * I dati relativi ai quiz disponibili verranno serializzati secondo questo formato binary
  * (numero quizzes) [(lunghezza nome)(nome)] [(lunghezza nome)(nome)] [...]
@@ -237,29 +237,29 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 
     char *pointer = payload;
     size_t string_len;
-    uint32_t net_string_len;
+    uint16_t net_string_len;
 
     // inserisco nel buffer il numero totale di quiz disponibili assicurandomi che all'interno del buffer ci sia abbastanza spazio
-    uint32_t net_strings_num = htonl(quizzesInfo->total_quizzes);
-    ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t));
-    memcpy(pointer, &net_strings_num, sizeof(uint32_t));
-    pointer += sizeof(uint32_t);
+    uint16_t net_strings_num = htons(quizzesInfo->total_quizzes);
+    ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t));
+    memcpy(pointer, &net_strings_num, sizeof(uint16_t));
+    pointer += sizeof(uint16_t);
 
     Quiz *quiz;
 
-    for (uint32_t i = 0; i < quizzesInfo->total_quizzes; i++)
+    for (uint16_t i = 0; i < quizzesInfo->total_quizzes; i++)
     {
         quiz = quizzesInfo->quizzes[i];
         string_len = strlen(quiz->name);
-        net_string_len = htonl(string_len);
+        net_string_len = htons(string_len);
 
         // gestisco la situazione in cui il buffer payload precedentemente allocato
         // non è abbastanza capiente
-        ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t) + string_len);
+        ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t) + string_len);
 
         // copio nel buffer la dimensione della stringa
-        memcpy(pointer, &net_string_len, sizeof(uint32_t));
-        pointer += sizeof(uint32_t);
+        memcpy(pointer, &net_string_len, sizeof(uint16_t));
+        pointer += sizeof(uint16_t);
 
         // copio nel buffer la stringa
         memcpy(pointer, quiz->name, string_len);
@@ -344,7 +344,7 @@ void handle_client_disconnection(Client *client, Context *context)
     close(client->socket_fd);
 
     // rimuovo tutte le classifiche del client
-    for (uint32_t i = 0; i < context->quizzesInfo.total_quizzes; i++)
+    for (uint16_t i = 0; i < context->quizzesInfo.total_quizzes; i++)
     {
         remove_ranking(client->client_rankings[i], context->quizzesInfo.quizzes[i]);
     }
@@ -378,7 +378,7 @@ void handle_client_disconnection(Client *client, Context *context)
  */
 void send_quiz_question(Client *client, Quiz *quiz)
 {
-    uint32_t question_to_send_id = client->client_rankings[client->current_quiz_id]->current_question;
+    uint16_t question_to_send_id = client->client_rankings[client->current_quiz_id]->current_question;
     if (question_to_send_id >= quiz->total_questions)
         return;
     // si seleziona la domanda corretta da inviare e si invia al client
@@ -463,7 +463,7 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
     // endptr viene impostato all'ultimo valore non convertito, dunque può essere usato per
     // capire se non è stato possibile effettuare la conversione
     char *endptr;
-    uint32_t selected_quiz_number = (uint32_t)strtoul(msg->payload, &endptr, 10);
+    uint16_t selected_quiz_number = (uint16_t)strtoul(msg->payload, &endptr, 10);
 
     // Gestisco le possibili situazioni di errore
 
@@ -511,8 +511,8 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
  * Questa funzione si occupa di effettuare la serializzazione utilizzando binary protocol
  * della classifica dei clients per ogni quiz
  *
- * In particolare utilizzo la funzione htonl per confertire da host byte order a network byte order
- * e utilizzo i tipi standardizzati uint32_t per garantire la portabilità
+ * In particolare utilizzo la funzione htons per confertire da host byte order a network byte order
+ * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità
  *
  * I dati relativi al ranking dei quiz verranno serializzati secondo questo formato binary protocol
  * (numero quizzes)  {(numero utenti partecipanti al quiz) [(lunghezza nome) (nome) (score)]} {...}
@@ -531,49 +531,49 @@ void send_ranking(Client *client, QuizzesInfo *quizzesInfo)
     // alloco le strutture dati necessarie
     char *pointer = payload;
     size_t string_len;
-    uint32_t net_string_len, net_client_score, net_clients_per_quiz;
+    uint16_t net_string_len, net_client_score, net_clients_per_quiz;
     int payload_size;
 
     // inserisco il numero totale di quizzes per cui dobbiamo stampare la classifica
-    uint32_t net_quizzes_num = htonl(quizzesInfo->total_quizzes);
-    ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t));
-    memcpy(pointer, &net_quizzes_num, sizeof(uint32_t));
-    pointer += sizeof(uint32_t);
+    uint16_t net_quizzes_num = htons(quizzesInfo->total_quizzes);
+    ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t));
+    memcpy(pointer, &net_quizzes_num, sizeof(uint16_t));
+    pointer += sizeof(uint16_t);
 
     // per ogni quiz inserisco in ordine: numero di utenti che hanno partecipato,
     // e per ogni utente lunghezza nome, nome e score
-    for (uint32_t i = 0; i < quizzesInfo->total_quizzes; i++)
+    for (uint16_t i = 0; i < quizzesInfo->total_quizzes; i++)
     {
         Quiz *quiz = quizzesInfo->quizzes[i];
         // inserisco il numero di clients in classifica per il quiz
-        net_clients_per_quiz = htonl(quiz->total_clients);
-        ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t));
-        memcpy(pointer, &net_clients_per_quiz, sizeof(uint32_t));
-        pointer += sizeof(uint32_t);
+        net_clients_per_quiz = htons(quiz->total_clients);
+        ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t));
+        memcpy(pointer, &net_clients_per_quiz, sizeof(uint16_t));
+        pointer += sizeof(uint16_t);
 
         RankingNode *current = quiz->ranking_head;
         // vado a scorrere la lista della classifica relativa al quiz
         while (current)
         {
             string_len = strlen(current->client->nickname);
-            net_string_len = htonl(string_len);
+            net_string_len = htons(string_len);
 
             // gestisco la situazine in cui il buffer allocato non è abbastanza grande da contenere
             // le informazioni
-            ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint32_t) + string_len + sizeof(uint32_t));
+            ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t) + string_len + sizeof(uint16_t));
 
             // inserisco la lunghezza del nickname del cliente corrente
-            memcpy(pointer, &net_string_len, sizeof(uint32_t));
-            pointer += sizeof(uint32_t);
+            memcpy(pointer, &net_string_len, sizeof(uint16_t));
+            pointer += sizeof(uint16_t);
 
             // inserisco il client nickname corrente
             memcpy(pointer, current->client->nickname, string_len);
             pointer += string_len;
 
             // inserisco lo score del client corrente
-            net_client_score = htonl(current->score);
-            memcpy(pointer, &net_client_score, sizeof(uint32_t));
-            pointer += sizeof(uint32_t);
+            net_client_score = htons(current->score);
+            memcpy(pointer, &net_client_score, sizeof(uint16_t));
+            pointer += sizeof(uint16_t);
             current = current->next_node;
         }
     }

@@ -11,7 +11,7 @@
 void show_quiz_names(QuizzesInfo *quizzesInfo)
 {
   printf("Temi:\n");
-  for (uint32_t i = 0; i < quizzesInfo->total_quizzes; ++i)
+  for (uint16_t i = 0; i < quizzesInfo->total_quizzes; ++i)
     printf("%d - %s\n", i + 1, quizzesInfo->quizzes[i]->name);
 }
 /**
@@ -37,7 +37,7 @@ void show_clients(ClientsInfo *clientsInfo)
  */
 void show_scores(QuizzesInfo *quizzesInfo)
 {
-  for (uint32_t i = 0; i < quizzesInfo->total_quizzes; i++)
+  for (uint16_t i = 0; i < quizzesInfo->total_quizzes; i++)
   {
     printf("\nPunteggio Tema %d\n", i + 1);
     list_rankings(quizzesInfo->quizzes[i]);
@@ -50,7 +50,7 @@ void show_scores(QuizzesInfo *quizzesInfo)
  */
 void show_completed_quizes(QuizzesInfo *quizzesInfo)
 {
-  for (uint32_t i = 0; i < quizzesInfo->total_quizzes; i++)
+  for (uint16_t i = 0; i < quizzesInfo->total_quizzes; i++)
   {
     printf("\nQuiz Tema %d completato\n", i + 1);
     list_completed_rankings(quizzesInfo->quizzes[i]);

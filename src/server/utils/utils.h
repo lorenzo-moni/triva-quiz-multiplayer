@@ -81,8 +81,8 @@ typedef struct Quiz
 {
     char *name;                       /**< Nome del quiz. */
     QuizQuestion **questions;         /**< Array di puntatori alle domande del quiz. */
-    uint32_t total_questions;         /**< Numero totale di domande nel quiz. */
-    uint32_t total_clients;           /**< Numero di client che sono in classifica */
+    uint16_t total_questions;         /**< Numero totale di domande nel quiz. */
+    uint16_t total_clients;           /**< Numero di client che sono in classifica */
     struct RankingNode *ranking_head; /**< Puntatore alla testa della lista della classifica. */
     struct RankingNode *ranking_tail; /**< Puntatore alla coda della lista della classifica. */
 } Quiz;
@@ -95,7 +95,7 @@ typedef struct Quiz
 typedef struct QuizzesInfo
 {
     Quiz **quizzes;         /**< Array di puntatori ai quiz disponibili. */
-    uint32_t total_quizzes; /**< Numero totale di quiz disponibili. */
+    uint16_t total_quizzes; /**< Numero totale di quiz disponibili. */
 } QuizzesInfo;
 
 /**
@@ -108,7 +108,7 @@ typedef struct QuizzesInfo
 typedef struct RankingNode
 {
     Client *client;                /**< Puntatore al client associato a questo nodo. */
-    uint32_t score;                /**< Punteggio ottenuto dal client nel quiz. */
+    uint16_t score;                /**< Punteggio ottenuto dal client nel quiz. */
     bool is_quiz_completed;        /**< Indica se il client ha completato il quiz */
     unsigned int current_question; /**< ID della domanda a cui il client deve rispondere. */
     struct RankingNode *prev_node; /**< Puntatore al nodo precedente nella lista di ranking. */

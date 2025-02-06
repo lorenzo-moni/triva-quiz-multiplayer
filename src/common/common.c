@@ -163,7 +163,8 @@ int receive_msg(int source_fd, Message *msg)
         }
     }
 
-    bytes_received = recv_all(source_fd, msg->payload, msg->payload_length);
+    bytes_received = receive_all(source_fd, msg->payload, msg->payload_length);
+    printf("bytes_recvd%lu\n", bytes_received);
     if (bytes_received <= 0)
     {
         free(msg->payload);

@@ -44,8 +44,8 @@ void request_available_quizzes(int server_fd)
  * Questa funzione si occupa di effettuare la deserializzazione utilizzando binary protocol
  * della lista dei quiz disponibili ricevita dal server.
  *
- * In particolare utilizzo la funzione ntohl per confertire da network byte order a host byte order
- * e utilizzo i tipi standardizzati uint32_t per garantire la portabilità.
+ * In particolare utilizzo la funzione ntohs per confertire da network byte order a host byte order
+ * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità.
  *
  * I dati relativi ai quiz disponibili vengono ricevuti secondo questo formato binary
  * (numero quizzes) [(lunghezza nome)(nome)] [(lunghezza nome)(nome)] [...]
@@ -58,20 +58,20 @@ void display_quiz_list(Message *msg)
     // inizializzo le strutture dati
     char *pointer = msg->payload;
     size_t string_len;
-    uint32_t net_strings_num, net_string_len, total_quizzes;
-    memcpy(&net_strings_num, pointer, sizeof(uint32_t));
-    pointer += sizeof(uint32_t);
+    uint16_t net_strings_num, net_string_len, total_quizzes;
+    memcpy(&net_strings_num, pointer, sizeof(uint16_t));
+    pointer += sizeof(uint16_t);
     // prelievo e converto dal buffer il numero totale dei quiz e effettuo un loop
-    total_quizzes = ntohl(net_strings_num);
+    total_quizzes = ntohs(net_strings_num);
 
     printf("\nQuiz disponibili\n");
     printf("+++++++++++++++++++++++++++\n");
 
-    for (uint32_t i = 0; i < total_quizzes; i++)
+    for (uint16_t i = 0; i < total_quizzes; i++)
     {
-        memcpy(&net_string_len, pointer, sizeof(uint32_t));
-        string_len = ntohl(net_string_len);
-        pointer += sizeof(uint32_t);
+        memcpy(&net_string_len, pointer, sizeof(uint16_t));
+        string_len = ntohs(net_string_len);
+        pointer += sizeof(uint16_t);
 
         printf("%u - %.*s\n", (unsigned)(i + 1), (int)string_len, pointer);
 
@@ -87,8 +87,8 @@ void display_quiz_list(Message *msg)
  * Questa funzione si occupa di effettuare la deserializzazione utilizzando binary protocol
  * della classifica per ogni quiz ricevuta dal server.
  *
- * In particolare utilizzo la funzione ntohl per confertire da network byte order a host byte order
- * e utilizzo i tipi standardizzati uint32_t per garantire la portabilità.
+ * In particolare utilizzo la funzione ntohs per confertire da network byte order a host byte order
+ * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità.
  *
  * I dati relativi al ranking dei quiz vengono ricevuti secondo questo formato binary protocol
  * (numero quizzes)  {(numero utenti partecipanti al quiz) [(lunghezza nome) (nome) (score)]} {...}
@@ -99,33 +99,33 @@ void display_quiz_list(Message *msg)
 void handle_rankings(Message *msg)
 {
     char *pointer = msg->payload;
-    uint32_t clients_per_quiz, quizzes_num, client_score, string_len;
-    uint32_t net_string_len, net_client_score, net_clients_per_quiz, net_quizzes_num;
+    uint16_t clients_per_quiz, quizzes_num, client_score, string_len;
+    uint16_t net_string_len, net_client_score, net_clients_per_quiz, net_quizzes_num;
     // prelevo il numero totale dei quiz
-    memcpy(&net_quizzes_num, pointer, sizeof(uint32_t));
-    quizzes_num = ntohl(net_quizzes_num);
-    pointer += sizeof(uint32_t);
+    memcpy(&net_quizzes_num, pointer, sizeof(uint16_t));
+    quizzes_num = ntohs(net_quizzes_num);
+    pointer += sizeof(uint16_t);
 
-    for (uint32_t i = 0; i < quizzes_num; i++)
+    for (uint16_t i = 0; i < quizzes_num; i++)
     {
-        memcpy(&net_clients_per_quiz, pointer, sizeof(uint32_t));
-        clients_per_quiz = ntohl(net_clients_per_quiz);
-        pointer += sizeof(uint32_t);
+        memcpy(&net_clients_per_quiz, pointer, sizeof(uint16_t));
+        clients_per_quiz = ntohs(net_clients_per_quiz);
+        pointer += sizeof(uint16_t);
         // prelevo il numero dei client che stanno partecipando al quiz
         printf("\nPunteggio Tema %d\n", i + 1);
-        for (uint32_t j = 0; j < clients_per_quiz; j++)
+        for (uint16_t j = 0; j < clients_per_quiz; j++)
         {
             // prelevo la lunghezza del nickname per il client
-            memcpy(&net_string_len, pointer, sizeof(uint32_t));
-            string_len = ntohl(net_string_len);
-            pointer += sizeof(uint32_t);
+            memcpy(&net_string_len, pointer, sizeof(uint16_t));
+            string_len = ntohs(net_string_len);
+            pointer += sizeof(uint16_t);
 
             // prelevo lo score del client
-            memcpy(&net_client_score, pointer + string_len, sizeof(uint32_t));
-            client_score = ntohl(net_client_score);
+            memcpy(&net_client_score, pointer + string_len, sizeof(uint16_t));
+            client_score = ntohs(net_client_score);
             // stampo a schermo il nickname e lo score
             printf("- %.*s %d\n", string_len, pointer, client_score);
-            pointer += string_len + sizeof(uint32_t);
+            pointer += string_len + sizeof(uint16_t);
         }
     }
 }
