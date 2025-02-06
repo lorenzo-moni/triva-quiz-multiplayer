@@ -1,10 +1,10 @@
-#include "common.h"
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "common.h"
 
 /**
  * @brief Gestisce gli errori di allocazione della memoria

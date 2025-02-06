@@ -3,11 +3,11 @@
 #include <unistd.h>
 #include "arpa/inet.h"
 #include <stdlib.h>
+#include <errno.h>
+#include <signal.h>
 #include "utils/utils.h"
-#include "signal.h"
 #include "../common/common.h"
 #include "../common/params.h"
-#include "errno.h"
 
 int main(int argc, const char **argv)
 {

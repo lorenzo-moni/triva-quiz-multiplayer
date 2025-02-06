@@ -1,5 +1,5 @@
+#include <stdbool.h>
 #include "utils.h"
-#include "stdbool.h"
 
 /**
  * @brief Mostra il menu del client

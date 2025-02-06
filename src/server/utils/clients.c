@@ -1,11 +1,11 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <errno.h>
+#include <sys/select.h>
 #include "../../common/common.h"
 #include "../../common/params.h"
 #include "utils.h"
-#include <sys/select.h>
-#include "errno.h"
 
 /**
  * @brief Gestisce l'inizializzazione delle informazioni relative ai clients che si possono connettere al sistema

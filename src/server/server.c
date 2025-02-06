@@ -6,8 +6,8 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <signal.h>
 #include "utils/utils.h"
-#include "signal.h"
 #include "../common/params.h"
 
 int main()

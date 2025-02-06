@@ -1,7 +1,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include "stddef.h"
+#include <stddef.h>
+#include <stdint.h>
 
 /**
  * @brief Enumerazione che definisce i tipi di messaggi scambiati tra client e server
@@ -33,9 +34,9 @@ typedef enum MessageType
  */
 typedef struct Message
 {
-    MessageType type;   /**< Tipo del messaggio */
-    int payload_length; /**< Dimensione del payload in byte */
-    char *payload;      /**< Puntatore ai dati del payload del messaggio */
+    MessageType type;        /**< Tipo del messaggio */
+    uint32_t payload_length; /**< Dimensione del payload in byte */
+    char *payload;           /**< Puntatore ai dati del payload del messaggio */
 } Message;
 
 void handle_malloc_error(void *ptr, const char *error_string);
