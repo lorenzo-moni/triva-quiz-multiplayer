@@ -24,7 +24,7 @@ if [ $? -ne 0 ]; then
 fi
 
 
-# Apro due nuove finestre del terminale e lancio ./client 3000
+# Apro due nuove finestre del terminale e lancio ./client 8080
 gnome-terminal -- bash -c "./client 8080; exec bash"
 gnome-terminal -- bash -c "./client 8080; exec bash"
 
