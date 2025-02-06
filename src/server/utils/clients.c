@@ -407,7 +407,7 @@ void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
     char *user_answer = msg->payload;
     // prelevo il RankingNode relativo al quiz per cui il client ha fornito una risposta
     RankingNode *current_ranking = client->client_rankings[client->current_quiz_id];
-    // preleve il quiz che sta giocando il client
+    // prelevo il quiz che sta giocando il client
     Quiz *playing_quiz = quizzesInfo->quizzes[client->current_quiz_id];
     // prelevo la domanda corrente a cui ha risposto il client
     QuizQuestion *current_question = playing_quiz->questions[current_ranking->current_question];
