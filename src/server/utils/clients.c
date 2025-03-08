@@ -169,7 +169,7 @@ void ensure_capacity(char **payload, char **pointer, size_t *buffer_size, size_t
  */
 void request_client_nickname(int client_fd)
 {
-    char *message = "Scegli un nickname (deve essere univoco): ";
+    char *message = "Choose a nickname (it must be unique): ";
     send_msg(client_fd, MSG_REQ_NICKNAME, message, strlen(message));
 }
 
@@ -300,7 +300,7 @@ void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *
     if (found)
     {
         // If the nickname is already in use, send a message indicating the situation
-        char *message = "Nickname già in uso";
+        char *message = "Nickname already in use";
         send_msg(client->socket_fd, MSG_INFO, message, strlen(message));
         // Request a valid nickname from the client again
         request_client_nickname(client->socket_fd);
@@ -418,12 +418,12 @@ void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
     // If the answer is correct, update the client's score and the ranking
     if (correct_answer)
     {
-        payload = "Risposta corretta";
+        payload = "Correct answer";
         current_ranking->score += 1;
         update_ranking(current_ranking, playing_quiz);
     }
     else
-        payload = "Risposta errata";
+        payload = "Wrong answer";
 
     send_msg(client->socket_fd, MSG_INFO, payload, strlen(payload));
 
@@ -432,7 +432,7 @@ void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
     if (current_ranking->current_question == playing_quiz->total_questions)
     {
         current_ranking->is_quiz_completed = true;
-        payload = "Hai terminato il quiz";
+        payload = "You completed the quiz";
         send_msg(client->socket_fd, MSG_INFO, payload, strlen(payload));
         client->state = SELECTING_QUIZ;
         send_quiz_list(client, quizzesInfo);
@@ -462,7 +462,7 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
     // The indicated quiz is not available
     if (selected_quiz_number > quizzesInfo->total_quizzes || selected_quiz_number == 0)
     {
-        char *message = "Quiz selezionato non valido";
+        char *message = "Selected quiz is not valid";
         send_msg(client->socket_fd, MSG_INFO, message, strlen(message));
         send_quiz_list(client, quizzesInfo);
         return;
@@ -471,7 +471,7 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
     // The current user has already completed the quiz during this session
     if (client->client_rankings[selected_quiz_number - 1] != NULL)
     {
-        char *message = "Il quiz selezionato è già stato completato in questa sessione";
+        char *message = "The selected quiz has already been completed in this session";
         send_msg(client->socket_fd, MSG_INFO, message, strlen(message));
 
         send_quiz_list(client, quizzesInfo);

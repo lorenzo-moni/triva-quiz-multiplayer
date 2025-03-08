@@ -129,7 +129,7 @@ Quiz *load_quiz_from_file(const char *file_path)
         // Allocate the object for the current question
         current_question = (QuizQuestion *)malloc(sizeof(QuizQuestion));
         handle_malloc_error(current_question, "Memory allocation error for a quiz question");
-        current_question->question = strdup(lineptr + 9);
+        current_question->question = strdup(lineptr + 10);
         current_question->total_answers = 0;
 
         // Read the next line, which should contain the answers
@@ -144,7 +144,7 @@ Quiz *load_quiz_from_file(const char *file_path)
             exit(EXIT_FAILURE);
         }
         // Skip the string "Answers: "
-        answers_line = lineptr + 10;
+        answers_line = lineptr + 9;
 
         // Create a copy of the answers line because strtok modifies the original string
         answer_line_copy = strdup(answers_line);
