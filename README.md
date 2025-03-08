@@ -8,7 +8,7 @@ Trivia Quiz Multiplayer is a multiplayer quiz game developed in C. The project a
 
 - **Client-Server Architecture:** Allows multiple user to connect to the same server and play Trivia Quiz
 - **I/O Multiplexing:** Utilizes the `select` primitive to ensure maximum scalability of the service.
-- **Client Rankings:** Server keeps track of connected users and rankings for each quiz theme.
+- **Clients Ranking:** Server keeps track of connected clients and rankings for each quiz theme.
 - **Customizable Quizzes:** Add or modify questions in the `quizzes` folder.
 - **Developed in C:** Well-organized source code compiled via a Makefile.
 - **Documentation:** Generate technical documentation using Doxygen (configured via the `Doxyfile`).
