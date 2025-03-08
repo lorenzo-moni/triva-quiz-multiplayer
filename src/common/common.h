@@ -5,38 +5,38 @@
 #include <stdint.h>
 
 /**
- * @brief Enumerazione che definisce i tipi di messaggi scambiati tra client e server
+ * @brief Enumeration that defines the types of messages exchanged between client and server
  *
- * Questa enumerazione rappresenta i diversi tipi di messaggi che possono essere
- * inviati e ricevuti durante la comunicazione tra il client e il server nel sistema di quiz.
+ * This enumeration represents the different types of messages that can be
+ * sent and received during communication between the client and the server in the quiz system.
  */
 typedef enum MessageType
 {
-    MSG_REQ_NICKNAME,  /**< Messaggio inviato dal server per richiedere al client il nickname */
-    MSG_SET_NICKNAME,  /**< Messaggio inviato dal client per settare il nickname */
-    MSG_OK_NICKNAME,   /**< Messaggio inviato dal server per indicare che il nickname scelto è corretto */
-    MSG_REQ_QUIZ_LIST, /**< Messaggio inviato dal client per richiedere la lista dei quiz */
-    MSG_RES_QUIZ_LIST, /**< Messaggio inviato dal server per inoltrare la lista dei quiz [BINARY PROTOCOL] */
-    MSG_QUIZ_SELECT,   /**< Messaggio inviato dal client per selezionare il quiz [BINARY PROTOCOL]*/
-    MSG_QUIZ_SELECTED, /**< Messaggio inviato dal server al client per confermare il quiz selezionato */
-    MSG_QUIZ_QUESTION, /**< Messaggio inviato dal server per inoltrare la domanda del quiz */
-    MSG_QUIZ_ANSWER,   /**< Messaggio inviato dal client con la risposta alla domanda */
-    MSG_REQ_RANKING,   /**< Messaggio inviato dal client al server per richiedere la classifica */
-    MSG_RES_RANKING,   /**< Messaggio inviato dal server al client per la classifica [BINARY PROTOCOL] */
-    MSG_DISCONNECT,    /**< Messaggio inviato dal client al server per indicare la disconnessione */
-    MSG_INFO           /**< Messaggio inviato dal server con un messaggio informativo per il client */
+    MSG_REQ_NICKNAME,  /**< Message sent by the server to request the client's nickname */
+    MSG_SET_NICKNAME,  /**< Message sent by the client to set the nickname */
+    MSG_OK_NICKNAME,   /**< Message sent by the server to indicate that the chosen nickname is correct */
+    MSG_REQ_QUIZ_LIST, /**< Message sent by the client to request the list of quizzes */
+    MSG_RES_QUIZ_LIST, /**< Message sent by the server to forward the list of quizzes [BINARY PROTOCOL] */
+    MSG_QUIZ_SELECT,   /**< Message sent by the client to select a quiz [BINARY PROTOCOL] */
+    MSG_QUIZ_SELECTED, /**< Message sent by the server to the client to confirm the selected quiz */
+    MSG_QUIZ_QUESTION, /**< Message sent by the server to forward the quiz question */
+    MSG_QUIZ_ANSWER,   /**< Message sent by the client with the answer to the quiz question */
+    MSG_REQ_RANKING,   /**< Message sent by the client to the server to request the ranking */
+    MSG_RES_RANKING,   /**< Message sent by the server to the client with the ranking [BINARY PROTOCOL] */
+    MSG_DISCONNECT,    /**< Message sent by the client to the server to indicate disconnection */
+    MSG_INFO           /**< Message sent by the server with an informational message for the client */
 } MessageType;
 
 /**
- * @brief Struttura che rappresenta un messaggio scambiato tra client e server
+ * @brief Structure representing a message exchanged between client and server
  *
- * In particolare il payload viene allocato nello heap in base a payload_length
+ * In particular, the payload is allocated on the heap based on payload_length.
  */
 typedef struct Message
 {
-    MessageType type;        /**< Tipo del messaggio */
-    uint32_t payload_length; /**< Dimensione del payload in byte */
-    char *payload;           /**< Puntatore ai dati del payload del messaggio */
+    MessageType type;        /**< Type of the message */
+    uint32_t payload_length; /**< Size of the payload in bytes */
+    char *payload;           /**< Pointer to the message payload data */
 } Message;
 
 void handle_malloc_error(void *ptr, const char *error_string);
@@ -44,4 +44,5 @@ int receive_msg(int client_fd, Message *msg);
 int send_msg(int client_fd, MessageType type, char *payload, size_t payload_len);
 int get_console_input(char *buffer, int buffer_size);
 void clear_input_buffer();
+
 #endif

@@ -6,63 +6,62 @@
 #include "utils.h"
 
 /**
- * @brief Conta il numero totale di files in una directory
+ * @brief Counts the total number of files in a directory
  *
- * @param directory puntatore all'oggetto directory di cui contare la totalità dei files
- * @return numero di file di tipo regolare contenuti nella directory
+ * @param directory pointer to the directory object whose files are to be counted
+ * @return number of regular files contained in the directory
  */
 int get_directory_total_files(DIR *directory)
 {
-    // controllo che la directory sia valida
+    // Check that the directory is valid
     if (!directory)
     {
-        printf("La directory selezionata non è valida\n");
+        printf("The selected directory is not valid\n");
         return -1;
     }
     int file_count = 0;
     struct dirent *entry;
-    // itero attraverso il contenuto della directory
-    // ad ogni iterazione readdir() restituirà un file diverso all'interno della directory
+    // Iterate through the contents of the directory
+    // In each iteration, readdir() returns a different file within the directory
     while ((entry = readdir(directory)) != NULL)
     {
-        // conto solamente i file di tipo regolare
+        // Count only regular files
         if (entry->d_type != DT_REG)
             continue;
         file_count++;
     }
-    // vado a riportare il puntatore del flusso nella directory all'inizio dato che le voci di questa directory potrebbero
-    // essere reiterate successivamente tramite readdir
-
+    // Reset the directory stream pointer to the beginning so that the directory entries
+    // can be iterated again later using readdir()
     rewinddir(directory);
     return file_count;
 }
 
 /**
- * @brief Carica il quiz presente all'interno di un file e crea la struttura Quiz corrispondente
+ * @brief Loads the quiz from a file and creates the corresponding Quiz structure
  *
- * Questa funzione si occupa di andare a creare la struttura Quiz relativa al quiz all'interno del file file_path.
- * Questa funzione si occupa della decodifica del file secondo un formato prefissato e dell'allocazione e riempimento di tutti i campi della struttura Quiz
+ * This function creates the Quiz structure corresponding to the quiz contained in the file specified by file_path.
+ * It decodes the file according to a predefined format and allocates and fills in all the fields of the Quiz structure.
  *
- * @param file_path puntatore al path del file che contiene le informazioni del quiz
- * @return struttura di tipo Quiz relativa al file file_path
+ * @param file_path pointer to the path of the file that contains the quiz information
+ * @return Quiz structure corresponding to the file file_path
  */
 Quiz *load_quiz_from_file(const char *file_path)
 {
     FILE *file = fopen(file_path, "r");
     if (!file)
     {
-        printf("Errore nell'apertura del file\n");
+        printf("Error opening the file\n");
         exit(EXIT_FAILURE);
     }
-    // alloco il quiz
+    // Allocate the quiz
     Quiz *quiz = (Quiz *)malloc(sizeof(Quiz));
-    handle_malloc_error(quiz, "Errore di allocazione memoria per il quiz");
+    handle_malloc_error(quiz, "Memory allocation error for the quiz");
 
-    // puntatore alla linea utilizzato da getline
+    // Pointer to the line used by getline
     char *lineptr = NULL;
-    // dimensione corrente del buffer lineptr
+    // Current size of the buffer lineptr
     size_t len = 0;
-    // numero di caratteri letti, incluso \n, ma escluso \0
+    // Number of characters read, including \n but excluding \0
     ssize_t read;
 
     int question_idx = 0;
@@ -77,80 +76,80 @@ Quiz *load_quiz_from_file(const char *file_path)
     quiz->ranking_tail = NULL;
     quiz->total_clients = 0;
 
-    // leggo la prima linea, relativa al nome del quiz
+    // Read the first line, which contains the name of the quiz
     if ((read = getline(&lineptr, &len, file)) != -1)
     {
-        // rimuovo il carattere di nuova linea e lo sostituisco con il terminatore
+        // Remove the newline character and replace it with a null terminator
         lineptr[strcspn(lineptr, "\n")] = '\0';
-        // duplico la stringa, incluso il terminatore in quiz->name
+        // Duplicate the string (including the terminator) into quiz->name
         quiz->name = strdup(lineptr);
     }
 
-    // conto il numero totale di domande contando quelle che sono le righe che contengono la parola domanda
+    // Count the total number of questions by counting the lines that contain the word "Question"
     while ((read = getline(&lineptr, &len, file)) != -1)
     {
-        // strstr cerca la prima occorrenza di una sottostringa in una stringa
-        if (strstr(lineptr, "Domanda"))
+        // strstr searches for the first occurrence of a substring in a string
+        if (strstr(lineptr, "Question"))
             question_count++;
     }
 
     quiz->total_questions = question_count;
 
-    // alloco gli array per domande e risposte
+    // Allocate arrays for questions and answers
     quiz->questions = (QuizQuestion **)malloc(question_count * sizeof(QuizQuestion *));
-    handle_malloc_error(quiz->questions, "Errore nell'allocazione della memoria per le domande del quiz");
+    handle_malloc_error(quiz->questions, "Memory allocation error for quiz questions");
 
-    // torno all'inizio del file per leggere le domande e risposte
+    // Rewind the file to read the questions and answers
     rewind(file);
-    // salto la prima linea che contiene il nome del quiz
+    // Skip the first line that contains the quiz name
     getline(&lineptr, &len, file);
 
-    // ciclo in maniera infinita attraverso il file in modo da poter leggere due righe alla volta
+    // Loop indefinitely through the file in order to read two lines at a time
     while (true)
     {
-        // leggo la linea vuota prima della domanda
+        // Read the empty line before the question
         read = getline(&lineptr, &len, file);
 
-        // leggo la riga che dovrebbe contenere la domanda
+        // Read the line that should contain the question
         read = getline(&lineptr, &len, file);
 
         if (read == -1)
-            // il file è finito
+            // End of file reached
             break;
 
-        // inserisco al posto del carattere \n il terminatore di stringa \0
+        // Replace the newline character with a null terminator
         lineptr[strcspn(lineptr, "\n")] = '\0';
 
-        // se la riga non è quella corretta
-        if (strncmp(lineptr, "Domanda: ", 9) != 0)
+        // If the line does not have the correct format
+        if (strncmp(lineptr, "Question: ", 10) != 0)
         {
-            printf("Il file del quiz %s non è formattato correttamente, consulta la documentazione\n", quiz->name);
+            printf("The quiz file %s is not formatted correctly, please refer to the documentation\n", quiz->name);
             exit(EXIT_FAILURE);
         }
-        // alloco l'oggetto relativo alla domanda corrente
+        // Allocate the object for the current question
         current_question = (QuizQuestion *)malloc(sizeof(QuizQuestion));
-        handle_malloc_error(current_question, "Errore nell'allocazione della domanda del quiz");
+        handle_malloc_error(current_question, "Memory allocation error for a quiz question");
         current_question->question = strdup(lineptr + 9);
         current_question->total_answers = 0;
 
-        // leggo la linea successiva che dovrebbe contenere le risposte
+        // Read the next line, which should contain the answers
         read = getline(&lineptr, &len, file);
 
         lineptr[strcspn(lineptr, "\n")] = '\0';
 
-        if (read == -1 || strncmp(lineptr, "Risposte: ", 10) != 0)
+        if (read == -1 || strncmp(lineptr, "Answers: ", 9) != 0)
         {
-            // in questo caso si ha una domanda senza le risposte
-            printf("Il file del quiz %s non è formattato correttamente, consulta la documentazione\n", quiz->name);
+            // In this case, there is a question without answers
+            printf("The quiz file %s is not formatted correctly, please refer to the documentation\n", quiz->name);
             exit(EXIT_FAILURE);
         }
-        // salto la stringa "Risposte: "
+        // Skip the string "Answers: "
         answers_line = lineptr + 10;
 
-        // creo una copia della linea con le risposte perché strtok modifica la riga di partenza
+        // Create a copy of the answers line because strtok modifies the original string
         answer_line_copy = strdup(answers_line);
 
-        // conto quante sono le risposte possibili
+        // Count the number of possible answers
         token = strtok(answer_line_copy, ",");
         while (token)
         {
@@ -159,19 +158,20 @@ Quiz *load_quiz_from_file(const char *file_path)
         }
         free(answer_line_copy);
 
-        // alloco il vettore che conterrà tutte le risposte
+        // Allocate the array that will contain all the answers
         current_question->answers = malloc(current_question->total_answers * sizeof(char *));
         if (!current_question->answers)
         {
-            printf("Errore nell'allocazione della memoria per le risposte ad una domanda\n");
+            printf("Memory allocation error for the answers to a question\n");
             exit(EXIT_FAILURE);
         }
 
-        // inserisco le risposte effettivamente nel array
+        // Insert the answers into the array
         token = strtok(answers_line, ",");
         answer_idx = 0;
         while (token)
         {
+            // Skip any leading spaces
             while (*token == ' ')
                 token += 1;
             current_question->answers[answer_idx] = strdup(token);
@@ -188,19 +188,19 @@ Quiz *load_quiz_from_file(const char *file_path)
 }
 
 /**
- * @brief Carica i quiz presenti all'interno di una directory
+ * @brief Loads the quizzes present in a directory
  *
- * Questa funzione si occupa di andare a caricare tutti i quiz presenti all'interno di una directory specifica utilizzando
- * la funzione load_quiz_from_file su tutti i file presenti all'interno della directory.
- * I quiz verranno inseriti all'interno dell'oggetto quizzesInfo per fare in modo che tutta l'applicazione ne possa usufruire.
+ * This function loads all the quizzes from a specific directory by using
+ * the load_quiz_from_file function on every file in the directory.
+ * The quizzes are stored in the quizzesInfo object so that the entire application can use them.
  *
- * @param directory_path path della directory da cui prelevare i quizzes
- * @param quizzesInfo puntatore alla struttura all'interno del quale inserire i quiz caricati
- * @return numero di quiz caricati
+ * @param directory_path path of the directory from which to load the quizzes
+ * @param quizzesInfo pointer to the structure in which to store the loaded quizzes
+ * @return number of quizzes loaded
  */
 int load_quizzes_from_directory(const char *directory_path, QuizzesInfo *quizzesInfo)
 {
-    // creo la struttura relativa alla directory e apro il path
+    // Create the directory structure and open the specified path
     struct dirent *entry;
     DIR *directory = opendir(directory_path);
     char file_path[PATH_MAX];
@@ -208,48 +208,45 @@ int load_quizzes_from_directory(const char *directory_path, QuizzesInfo *quizzes
 
     if (directory == NULL)
     {
-        printf("Errore nell'apertura della directory specificata\n");
+        printf("Error opening the specified directory\n");
         exit(EXIT_FAILURE);
     }
 
-    // conto il numero totale dei quiz presenti nella directory
+    // Count the total number of quizzes present in the directory
     quizzesInfo->total_quizzes = get_directory_total_files(directory);
 
-    // alloco un array di puntatori a quiz che verranno popolati leggendo i files della directory
+    // Allocate an array of quiz pointers that will be populated by reading the files in the directory
     quizzesInfo->quizzes = (Quiz **)malloc((quizzesInfo->total_quizzes) * sizeof(Quiz *));
-
     if (!quizzesInfo->quizzes)
     {
-        printf("Errore di allocazione memoria per l'array dei quiz\n");
+        printf("Memory allocation error for the quiz array\n");
         exit(EXIT_FAILURE);
     }
 
-    // itero attraverso i file della directory
+    // Iterate through the files in the directory
     while ((entry = readdir(directory)) != NULL)
     {
-        // considero solamente i file di tipo regolare
+        // Consider only regular files
         if (entry->d_type != DT_REG)
             continue;
 
-        // inserisco all'interno di file_path il path completo del file da da cui prelevare il quiz
+        // Construct the complete file path from which to load the quiz
         snprintf(file_path, sizeof(file_path), "%s/%s", directory_path, entry->d_name);
 
-        // prelevo il quiz dal file file_path e lo inserisco nell'array
-
+        // Load the quiz from the file and insert it into the array
         quizzesInfo->quizzes[current_quiz] = load_quiz_from_file(file_path);
-
         current_quiz++;
     }
 
-    // chiudo la directory
+    // Close the directory
     closedir(directory);
     return quizzesInfo->total_quizzes;
 }
 
 /**
- * @brief Dealloca tutte le informazioni relative ai quiz
+ * @brief Deallocates all the information related to the quizzes
  *
- * @param quizzesInfo puntatore alla struttura all'interno del quale sono contenuti tutti i quizzes
+ * @param quizzesInfo pointer to the structure that contains all the quizzes
  */
 void deallocate_quizzes(QuizzesInfo *quizzesInfo)
 {
@@ -260,7 +257,7 @@ void deallocate_quizzes(QuizzesInfo *quizzesInfo)
             continue;
         free(quiz->name);
 
-        // dealloco la lista doppiamente concatenata relativa alla classifica del quiz
+        // Deallocate the doubly linked list associated with the quiz ranking
         deallocate_rankings(quiz);
 
         for (uint16_t j = 0; j < quiz->total_questions; j++)
@@ -278,7 +275,6 @@ void deallocate_quizzes(QuizzesInfo *quizzesInfo)
             free(question);
         }
         free(quiz->questions);
-
         free(quiz);
     }
     free(quizzesInfo->quizzes);

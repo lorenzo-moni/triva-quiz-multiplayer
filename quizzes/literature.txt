@@ -1,16 +1,16 @@
-Letteratura
+Literature
 
-Domanda: Quale poeta italiano è autore della Divina Commedia?
-Risposte: dante alighieri, dante
+Question: Which Italian poet is the author of the Divine Comedy?
+Answers: dante alighieri, dante
 
-Domanda: Quale romanzo descrive un regime totalitario controllato da "The Big Brother"?
-Risposte: 1984, millenovecentottantaquattro
+Question: Which novel describes a totalitarian regime controlled by "The Big Brother"?
+Answers: 1984, nineteen eighty-four
 
-Domanda: Quale romanzo italiano inizia con la frase "Quel ramo del lago di Como, che volge a mezzogiorno..."?
-Risposte: i promessi sposi, promessi sposi
+Question: Which Italian novel begins with the phrase "Quel ramo del lago di Como, che volge a mezzogiorno..."?
+Answers: the Betrothed, betrothed, i promessi sposi, promessi sposi
 
-Domanda: Chi ha scritto Le notti bianche?
-Risposte: fëdor dostoevskij, dostoevskij
+Question: Who wrote White Nights?
+Answers: fyodor dostoevsky, dostoevsky
 
-Domanda: Chi scrisse la storia di una famiglia di pescatori originaria di Aci Trezza?
-Risposte: giovanni verga, verga
+Question: Who wrote the story of a family of fishermen from Aci Trezza?
+Answers: giovanni verga, verga

@@ -1,16 +1,16 @@
-Musica
+Music
 
-Domanda: Chi è noto come il Re del Pop?
-Risposte: michael jackson, jackson
+Question: Who is known as the King of Pop?
+Answers: michael jackson, jackson
 
-Domanda: Quale band ha scritto la canzone Bohemian Rhapsody?
-Risposte: queen
+Question: Which band wrote the song Bohemian Rhapsody?
+Answers: queen
 
-Domanda: Quale strumento suonava Mozart?
-Risposte: pianoforte, violino
+Question: Which instrument did Mozart play?
+Answers: piano, violin
 
-Domanda: Chi ha scritto l'opera La Traviata?
-Risposte: giuseppe verdi, verdi
+Question: Who composed the opera La Traviata?
+Answers: gGiuseppe verdi, verdi
 
-Domanda: Chi è il frontman della band The Rolling Stones?
-Risposte: mick jagger, jagger
+Question: Who is the frontman of the band The Rolling Stones?
+Answers: mick jagger, jagger

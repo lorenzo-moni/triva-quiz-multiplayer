@@ -1,16 +1,16 @@
-Tecnologia
+Technology
 
-Domanda: Chi ha collegato per la prima volta l'Italia ad Internet?
-Risposte: luciano lenzini, lenzini
+Question: Who first connected Italy to the internet?
+Answers: luciano lenzini, lenzini
 
-Domanda: Qual è il sistema operativo per smartphone più diffuso al mondo?
-Risposte: android
+Question: What is the most widely used smartphone operating system in the world?
+Answers: android
 
-Domanda: Chi è considerato il padre del computer moderno?
-Risposte: alan turing, turing
+Question: Who is considered the father of the modern computer?
+Answers: alan turing, turing
 
-Domanda: Chi è stato il fondatore di Napster?
-Risposte: sean parker, parker, shawn fanning, fanning, parker e fanning, sean parker e shawn fanning
+Question: Who was the founder of napster?
+Answers: sean parker, parker, shawn fanning, fanning, parker and fanning, sean parker and shawn fanning
 
-Domanda: Chi è stato l'ideatore della funzione crittografica di hash MD5?
-Risposte: ronald rivest, rivest
+Question: Who was the creator of the md5 cryptographic hash function?
+Answers: ronald rivest, rivest

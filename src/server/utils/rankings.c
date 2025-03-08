@@ -1,17 +1,17 @@
 #include "utils.h"
 
 /**
- * @brief Crea un nuovo nodo RankingNode relativo a un client
+ * @brief Creates a new RankingNode for a client
  *
- * Questa funzione inizializza un nodo di tipo RankingNode relativo ad un client passato per parametro
+ * This function initializes a RankingNode for a client passed as a parameter.
  *
- * @param client puntatore al client a cui il RankingNode è relativo
- * @return nodo di tipo RankingNode inizializzato
+ * @param client pointer to the client associated with the RankingNode
+ * @return initialized RankingNode
  */
 RankingNode *create_ranking_node(Client *client)
 {
     RankingNode *new_node = malloc(sizeof(RankingNode));
-    handle_malloc_error(new_node, "Errore nell'allocazione del RankingNode");
+    handle_malloc_error(new_node, "Error allocating RankingNode");
     new_node->client = client;
     new_node->is_quiz_completed = false;
     new_node->score = 0;
@@ -23,12 +23,12 @@ RankingNode *create_ranking_node(Client *client)
 }
 
 /**
- * @brief Inserisce il RankingNode in coda alla classifica del Quiz
+ * @brief Inserts the RankingNode at the end of the Quiz ranking list
  *
- * Questa funzione inserisce un nodo RankingNode relativo ad un client per un quiz in coda alla classifica relativa a tale quiz
+ * This function inserts a RankingNode for a client at the tail of the ranking list for a quiz.
  *
- * @param quiz puntatore al quiz in coda alla quale classifica inserire il nodo
- * @param node puntatore al nodo da inserire in coda alla classifica del quiz
+ * @param quiz pointer to the quiz whose ranking list will have the node inserted
+ * @param node pointer to the node to be inserted at the end of the quiz ranking list
  */
 void insert_ranking_node(Quiz *quiz, RankingNode *node)
 {
@@ -46,9 +46,9 @@ void insert_ranking_node(Quiz *quiz, RankingNode *node)
 }
 
 /**
- * @brief Stampa a schermo la classifica relativa ad un quiz
+ * @brief Displays the ranking list for a quiz on screen
  *
- * @param quiz puntatore al quiz di cui stampare la classifica a schermo
+ * @param quiz pointer to the quiz for which to display the ranking list
  */
 void list_rankings(Quiz *quiz)
 {
@@ -61,10 +61,11 @@ void list_rankings(Quiz *quiz)
         current = current->next_node;
     }
 }
+
 /**
- * @brief Stampa a schermo il nickname degli utenti che hanno completato il quiz
+ * @brief Displays the nicknames of users who have completed the quiz on screen
  *
- * @param quiz puntatore al quiz di cui stampare gli utenti che lo hanno completato
+ * @param quiz pointer to the quiz for which to display the users that have completed it
  */
 void list_completed_rankings(Quiz *quiz)
 {
@@ -84,38 +85,38 @@ void list_completed_rankings(Quiz *quiz)
 }
 
 /**
- * @brief Aggiorna la classifica di un quiz
+ * @brief Updates the ranking for a quiz
  *
- * Questa funzione sposta un nodo verso la testa della lista doppiamente concatenata relativa alla classifica di un quiz fino ad inserirlo
- * nella posizione corretta relativa al suo score
+ * This function moves a node towards the head of the doubly linked ranking list for a quiz until it is placed
+ * in the correct position based on its score.
  *
- * @param node puntatore al nodo da spostare all'interno della classifica in base allo score
- * @param quiz puntatore al quiz di cui modificare la classifica
+ * @param node pointer to the node to reposition within the ranking based on its score
+ * @param quiz pointer to the quiz whose ranking is to be updated
  */
 void update_ranking(RankingNode *node, Quiz *quiz)
 {
     if (node == NULL || quiz->ranking_head == NULL)
         return;
 
-    // se il nodo è già in posizione corretta o in testa allora non faccio niente
+    // If the node is already in the correct position or at the head, do nothing
     if (node->prev_node == NULL || node->score <= node->prev_node->score)
         return;
 
-    // vado a rimuovere il nodo dalla posizione corrente
+    // Remove the node from its current position
     if (node->next_node != NULL)
         node->next_node->prev_node = node->prev_node;
     if (node->prev_node != NULL)
         node->prev_node->next_node = node->next_node;
 
-    // trovo la posizione corretta
+    // Find the correct position
     RankingNode *current = node->prev_node;
     while (current != NULL && current->score < node->score)
         current = current->prev_node;
 
-    // inserisco il nodo nella nuova posizione
+    // Insert the node in the new position
     if (current == NULL)
     {
-        // inserisco il nodo in testa
+        // Insert the node at the head
         node->next_node = quiz->ranking_head;
         node->prev_node = NULL;
         quiz->ranking_head->prev_node = node;
@@ -123,7 +124,7 @@ void update_ranking(RankingNode *node, Quiz *quiz)
     }
     else
     {
-        // inserisco il nodo dopo di current
+        // Insert the node after current
         node->next_node = current->next_node;
         node->prev_node = current;
         if (current->next_node != NULL)
@@ -135,12 +136,12 @@ void update_ranking(RankingNode *node, Quiz *quiz)
 }
 
 /**
- * @brief Rimuove e dealloca un elemento della classifica di un quiz
+ * @brief Removes and deallocates an element from a quiz ranking
  *
- * Questa funzione si occupa di rimuovere e deallocare un RankingNode dalla lista doppiamente concatenata relativa a un Quiz
+ * This function removes and deallocates a RankingNode from the doubly linked ranking list of a quiz.
  *
- * @param node puntatore al nodo da rimuovere e deallocare
- * @param quiz puntatore al quiz nella cui classifica si trova il nodo
+ * @param node pointer to the node to be removed and deallocated
+ * @param quiz pointer to the quiz whose ranking contains the node
  */
 void remove_ranking(RankingNode *node, Quiz *quiz)
 {
@@ -167,9 +168,9 @@ void remove_ranking(RankingNode *node, Quiz *quiz)
 }
 
 /**
- * @brief Rimuove e dealloca tutti i RankingNode di un quiz
+ * @brief Removes and deallocates all RankingNodes of a quiz
  *
- * @param quiz puntatore al quiz di cui rimuovere la classifica
+ * @param quiz pointer to the quiz whose ranking list is to be deallocated
  */
 void deallocate_rankings(Quiz *quiz)
 {

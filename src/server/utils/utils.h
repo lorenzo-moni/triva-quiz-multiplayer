@@ -12,123 +12,124 @@
 #include "../../common/common.h"
 
 /**
- * @brief Indica lo stato in cui si trova un determinato Client
+ * @brief Indicates the state of a given Client
  *
- * Questa struttura memorizza lo stato corrente del client
+ * This structure stores the current state of the client.
  */
 typedef enum ClientState
 {
-    LOGIN,          /**< Il client sta effettuando il login. */
-    LOGGED_IN,      /**< Il client ha effettuato con successo il login. */
-    SELECTING_QUIZ, /**< Il client sta selezionando un quiz. */
-    PLAYING         /**< Il client sta partecipando a un quiz. */
+    LOGIN,          /**< The client is logging in. */
+    LOGGED_IN,      /**< The client has successfully logged in. */
+    SELECTING_QUIZ, /**< The client is selecting a quiz. */
+    PLAYING         /**< The client is participating in a quiz. */
 } ClientState;
 
 /**
- * @brief Rappresenta un client connesso al server
+ * @brief Represents a client connected to the server
  *
- * Questa struttura contiene informazioni relative a un client,
- * inclusi il socket di connessione, il nickname, lo stato corrente,
- * i punteggi nei quiz e i puntatori per la gestione di una lista collegata.
+ * This structure contains information related to a client,
+ * including the connection socket, the nickname, the current state,
+ * the quiz scores, and pointers for managing a linked list.
  */
 typedef struct Client
 {
-    int socket_fd;                        /**< File descriptor del socket del client. */
-    char *nickname;                       /**< Nickname del client. */
-    ClientState state;                    /**< Stato attuale del client. */
-    struct RankingNode **client_rankings; /**< Array dei ranking del client in ogni quiz disponibile */
-    unsigned int current_quiz_id;         /**< ID del quiz a cui il client sta partecipando. (-1 se non sta partecipando a nessun quiz) */
-    struct Client *prev_node;             /**< Puntatore al precedente client nella lista dei clients. */
-    struct Client *next_node;             /**< Puntatore al prossimo client nella lista. */
+    int socket_fd;                        /**< File descriptor of the client's socket. */
+    char *nickname;                       /**< Client's nickname. */
+    ClientState state;                    /**< Current state of the client. */
+    struct RankingNode **client_rankings; /**< Array of the client's rankings in each available quiz. */
+    unsigned int current_quiz_id;         /**< ID of the quiz in which the client is participating. (-1 if not participating in any quiz) */
+    struct Client *prev_node;             /**< Pointer to the previous client in the client list. */
+    struct Client *next_node;             /**< Pointer to the next client in the list. */
 } Client;
 
 /**
- * @brief Contiene informazioni su tutti i client connessi
+ * @brief Contains information on all connected clients
  *
- * Questa struttura gestisce la lista dei client attualmente connessi e presenta al suo interno
- * il puntatore alla testa e alla coda della lista doppiamente concatenata che contiene
- * tutti i clients, il numero di clients connessi e il massimo file descript relativo ai client connessi
+ * This structure manages the list of currently connected clients and contains
+ * pointers to the head and tail of the doubly linked list that holds
+ * all clients, the number of currently connected clients, and the maximum file descriptor
+ * among the connected clients.
  */
 typedef struct ClientsInfo
 {
-    struct Client *clients_head;    /**< Puntatore al primo client nella lista. */
-    struct Client *clients_tail;    /**< Puntatore all'ultimo client nella lista. */
-    unsigned int connected_clients; /**< Numero totale di client attualmente connessi. */
-    int max_fd;                     /**< Valore massimo del file descriptor tra i client. */
+    struct Client *clients_head;    /**< Pointer to the first client in the list. */
+    struct Client *clients_tail;    /**< Pointer to the last client in the list. */
+    unsigned int connected_clients; /**< Total number of currently connected clients. */
+    int max_fd;                     /**< Maximum file descriptor value among the clients. */
 } ClientsInfo;
 
 /**
- * @brief Contiene informazioni relative ad una domanda di un quiz
+ * @brief Contains information related to a quiz question
  *
- * Questa struttura contiene al suo interno le informazioni riguardanti una domanda di un quiz
- * In particolare contiene il testo della domanda, il numero totale di risposte e il testo delle risposte *
+ * This structure contains information regarding a quiz question,
+ * including the question text, the total number of answers, and the text of the answers.
  */
 typedef struct QuizQuestion
 {
-    char *question;    /**< Testo della domanda del quiz. */
-    char **answers;    /**< Array di stringhe contenente le possibili risposte. */
-    int total_answers; /**< Numero totale di possibili. */
+    char *question;    /**< Text of the quiz question. */
+    char **answers;    /**< Array of strings containing the possible answers. */
+    int total_answers; /**< Total number of possible answers. */
 } QuizQuestion;
 
 /**
- * @brief Contiene informazioni relative ad un quiz
+ * @brief Contains information related to a quiz
  *
- * Questa struttura contiene al suo interno le informazioni riguardanti un quiz
- * In particolare contiene il nome, le domande e i puntatori alla coda e alla testa della lista doppiamente concatenata
- * relativa alla classifica del quiz
+ * This structure contains information regarding a quiz,
+ * including the name, the questions, and pointers to the head and tail of the doubly linked list
+ * representing the quiz ranking.
  */
 typedef struct Quiz
 {
-    char *name;                       /**< Nome del quiz. */
-    QuizQuestion **questions;         /**< Array di puntatori alle domande del quiz. */
-    uint16_t total_questions;         /**< Numero totale di domande nel quiz. */
-    uint16_t total_clients;           /**< Numero di client che sono in classifica */
-    struct RankingNode *ranking_head; /**< Puntatore alla testa della lista della classifica. */
-    struct RankingNode *ranking_tail; /**< Puntatore alla coda della lista della classifica. */
+    char *name;                       /**< Name of the quiz. */
+    QuizQuestion **questions;         /**< Array of pointers to the quiz questions. */
+    uint16_t total_questions;         /**< Total number of questions in the quiz. */
+    uint16_t total_clients;           /**< Number of clients in the ranking. */
+    struct RankingNode *ranking_head; /**< Pointer to the head of the ranking list. */
+    struct RankingNode *ranking_tail; /**< Pointer to the tail of the ranking list. */
 } Quiz;
+
 /**
- * @brief Contiene informazioni su tutti i quiz disponibili
+ * @brief Contains information on all available quizzes
  *
- * Questa struttura gestisce un array di puntatori ai quiz disponibili
- * e il numero totale di quiz.
+ * This structure manages an array of pointers to the available quizzes
+ * and the total number of quizzes.
  */
 typedef struct QuizzesInfo
 {
-    Quiz **quizzes;         /**< Array di puntatori ai quiz disponibili. */
-    uint16_t total_quizzes; /**< Numero totale di quiz disponibili. */
+    Quiz **quizzes;         /**< Array of pointers to the available quizzes. */
+    uint16_t total_quizzes; /**< Total number of available quizzes. */
 } QuizzesInfo;
 
 /**
- * @brief Nodo della lista di ranking per un quiz
+ * @brief Node of the ranking list for a quiz
  *
- * Questa struttura rappresenta un nodo nella lista doppiamente concatenata di ranking dei partecipanti
- * a un quiz, contenente informazioni sul client, il punteggio, lo stato di completamento
- * del quiz e i puntatori ai nodi precedente e successivo nella lista.
+ * This structure represents a node in the doubly linked ranking list of quiz participants,
+ * containing information about the client, the score, the quiz completion status,
+ * and pointers to the previous and next nodes in the list.
  */
 typedef struct RankingNode
 {
-    Client *client;                /**< Puntatore al client associato a questo nodo. */
-    uint16_t score;                /**< Punteggio ottenuto dal client nel quiz. */
-    bool is_quiz_completed;        /**< Indica se il client ha completato il quiz */
-    unsigned int current_question; /**< ID della domanda a cui il client deve rispondere. */
-    struct RankingNode *prev_node; /**< Puntatore al nodo precedente nella lista di ranking. */
-    struct RankingNode *next_node; /**< Puntatore al nodo successivo nella lista di ranking. */
+    Client *client;                /**< Pointer to the client associated with this node. */
+    uint16_t score;                /**< Score obtained by the client in the quiz. */
+    bool is_quiz_completed;        /**< Indicates if the client has completed the quiz. */
+    unsigned int current_question; /**< ID of the question the client needs to answer. */
+    struct RankingNode *prev_node; /**< Pointer to the previous node in the ranking list. */
+    struct RankingNode *next_node; /**< Pointer to the next node in the ranking list. */
 } RankingNode;
 
 /**
- * @brief Contesto globale dell'applicazione server
+ * @brief Global context of the server application
  *
- * Questa struttura raggruppa tutte le informazioni relative allo stato del server e permette
- * un agevole passaggio delle informazioni attraverso le chiamate di funzione *
+ * This structure groups all information related to the server's state and allows
+ * for easy transfer of information through function calls.
  */
 typedef struct Context
 {
-    ClientsInfo clientsInfo; /**< Informazioni sui client connessi. */
-    QuizzesInfo quizzesInfo; /**< Informazioni sui quiz disponibili. */
-    fd_set readfds;          /**< Set di file descriptor gestito dalla select con i socket pronti per la lettura. */
-    fd_set masterfds;        /**< Set principale di file descriptor. */
-    int server_fd;           /**< File descriptor del socket listener del server. */
-
+    ClientsInfo clientsInfo; /**< Information about connected clients. */
+    QuizzesInfo quizzesInfo; /**< Information about available quizzes. */
+    fd_set readfds;          /**< Set of file descriptors managed by select with sockets ready for reading. */
+    fd_set masterfds;        /**< Master set of file descriptors. */
+    int server_fd;           /**< File descriptor of the server's listener socket. */
 } Context;
 
 // Client list

@@ -1,33 +1,31 @@
 #!/bin/bash
 
-# Controllo la presenza di gcc
+# Check for the presence of gcc
 if ! command -v gcc &> /dev/null
 then
-    echo "Errore: gcc non è installato."
+    echo "Error: gcc is not installed."
     exit 1
 fi
 
-# Controllo la presenza di make
+# Check for the presence of make
 if ! command -v make &> /dev/null
 then
-    echo "Errore: make non è installato."
+    echo "Error: make is not installed."
     exit 1
 fi
 
-# Lancio il comando make
+# Run the make command
 make
 
-# Controllo se il comando make è andato a buon fine
+# Check if the make command was successful
 if [ $? -ne 0 ]; then
-    echo "Errore: il comando make è fallito."
+    echo "Error: the make command failed."
     exit 1
 fi
 
-
-# Apro due nuove finestre del terminale e lancio ./client 8080
+# Open two new terminal windows and run ./client 8080
 gnome-terminal -- bash -c "./client 8080; exec bash"
 gnome-terminal -- bash -c "./client 8080; exec bash"
 
-
-# Lancio il comando ./server nella scheda corrente
+# Run the ./server command in the current terminal tab
 ./server

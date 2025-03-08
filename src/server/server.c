@@ -24,47 +24,46 @@ int main()
     FD_ZERO(&context.masterfds);
     FD_ZERO(&context.readfds);
 
-    // Creazione del socket del server
+    // Create the server socket
     if ((context.server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
-        perror("Socket fallita");
+        perror("Socket failed");
         exit(EXIT_FAILURE);
     }
 
     if (setsockopt(context.server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
     {
-        perror("Errore nell'impostazione di SO_REUSEADDR");
+        perror("Error setting SO_REUSEADDR");
         exit(EXIT_FAILURE);
     }
 
-    // Configurazione del socket
-
+    // Configure the socket
     server_address.sin_family = AF_INET;
     inet_pton(AF_INET, SERVER_IP, &server_address.sin_addr);
     server_address.sin_port = htons(SERVER_PORT);
 
-    // Binding del socket
+    // Bind the socket
     if (bind(context.server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
     {
-        perror("Bind fallita");
+        perror("Bind failed");
         exit(EXIT_FAILURE);
     }
 
-    // In ascolto
+    // Listen for connections
     if (listen(context.server_fd, 10) < 0)
     {
-        perror("Listen fallita");
+        perror("Listen failed");
         exit(EXIT_FAILURE);
     }
 
-    printf("DEBUG: Server in ascolto sulla porta %d...\n", SERVER_PORT);
+    printf("DEBUG: Server listening on port %d...\n", SERVER_PORT);
 
     FD_SET(context.server_fd, &context.masterfds);
-    FD_SET(STDIN_FILENO, &context.masterfds); // Aggiungi lo stdin per monitorare l'input
+    FD_SET(STDIN_FILENO, &context.masterfds); // Add stdin to monitor input
     context.clientsInfo.max_fd = (context.server_fd > STDIN_FILENO) ? context.server_fd : STDIN_FILENO;
     Client *client, *next;
 
-    // Ciclo principale del server
+    // Main server loop
     while (1)
     {
         context.readfds = context.masterfds;
@@ -73,19 +72,19 @@ int main()
 
         activity = select(context.clientsInfo.max_fd + 1, &context.readfds, NULL, NULL, NULL);
 
-        // controllo eventuali errori nella select
+        // Check for errors in select
         if ((activity < 0) && (errno != EINTR))
         {
-            perror("Select fallita");
+            perror("Select failed");
             exit(EXIT_FAILURE);
         }
-        // controllo se l'utente ha digitato il carattere "q" per terminare il server
+        // Check if the user typed the character "q" to terminate the server
         if (FD_ISSET(STDIN_FILENO, &context.readfds))
         {
             char buffer[DEFAULT_PAYLOAD_SIZE];
             if (get_console_input(buffer, sizeof(buffer)) == -1)
             {
-                // Se c'è un errore o EOF, rimuovo STDIN dal master set
+                // If there is an error or EOF, remove STDIN from the master set
                 FD_CLR(STDIN_FILENO, &context.masterfds);
             }
             else if (buffer[0] == 'q' && buffer[1] == '\0')
@@ -94,11 +93,11 @@ int main()
             }
         }
 
-        // gestisco una nuova connessione sul server da parte di un utente
+        // Handle a new connection from a user on the server
         if (FD_ISSET(context.server_fd, &context.readfds))
             handle_new_client_connection(&context);
 
-        // ciclo all'interno della lista dei clients per gestire le richieste inviate sui rispettivi socket
+        // Loop through the client list to handle requests on their respective sockets
         client = context.clientsInfo.clients_head;
         while (client)
         {
@@ -109,12 +108,12 @@ int main()
         }
     }
 
-    printf("\nTerminazione del server\n");
+    printf("\nTerminating server\n");
     close(context.server_fd);
 
-    // dealloco i quiz
+    // Deallocate the quizzes
     deallocate_quizzes(&context.quizzesInfo);
-    // dealloco i clients
+    // Deallocate the clients
     deallocate_clients(&context.clientsInfo);
     return 0;
 }

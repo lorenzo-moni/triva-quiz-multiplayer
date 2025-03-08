@@ -14,7 +14,7 @@ int main(int argc, const char **argv)
 
     if (argc != 2)
     {
-        printf("Uso: %s <porta>\n", argv[0]);
+        printf("Usage: %s <port>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -22,9 +22,9 @@ int main(int argc, const char **argv)
     struct sockaddr_in server_address;
     int choice;
 
-    // ignoro il segnale SIGPIPE che viene inviato quando si tenta di scrivere
-    // su un socket o una pipe che non ha più lettori attivi
-    // in questo modo ignoro il segnale e non permetto al client di crashare nel caso il server chiuda la connessione
+    // Ignore the SIGPIPE signal that is sent when attempting to write
+    // to a socket or pipe that no longer has active readers.
+    // This prevents the client from crashing if the server closes the connection.
     signal(SIGPIPE, SIG_IGN);
 
     while (1)
@@ -41,41 +41,41 @@ int main(int argc, const char **argv)
             break;
         else if (choice != 1)
         {
-            printf("Opzione non corretta, riprova\n\n");
+            printf("Incorrect option, please try again\n\n");
             continue;
         }
 
-        // creo del socket TCP
+        // Create a TCP socket
         if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         {
-            printf("Errore nella creazione del socket\n");
+            printf("Error creating the socket\n");
             exit(EXIT_FAILURE);
         }
 
         server_address.sin_family = AF_INET;
         server_address.sin_port = htons(atoi(argv[1]));
 
-        // converto l'indirizzo IP nella network version
+        // Convert the IP address to network format
         if (inet_pton(AF_INET, SERVER_IP, &server_address.sin_addr) <= 0)
         {
-            printf("Indirizzo non valido\n");
+            printf("Invalid address\n");
             exit(EXIT_FAILURE);
         }
 
-        // effettuo la connessione al server
+        // Establish the connection to the server
         if (connect(server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
         {
-            printf("Connessione fallita\n\n");
+            printf("Connection failed\n\n");
             continue;
         }
 
         while (1)
         {
-            // ricevo il messaggio dal server e agisco di conseguenza
+            // Receive the message from the server and act accordingly
             ret = receive_msg(server_fd, &received_msg);
             if (ret == 0)
             {
-                printf("\nIl server ha chiuso la connessione\n");
+                printf("\nThe server has closed the connection\n");
                 break;
             }
 
@@ -83,12 +83,12 @@ int main(int argc, const char **argv)
             {
                 if (errno == ECONNRESET || errno == ETIMEDOUT || errno == EPIPE)
                 {
-                    printf("Il server ha chiuso la connessione in modo anomalo\n");
+                    printf("The server closed the connection abnormally\n");
                     break;
                 }
                 else
                 {
-                    printf("Errore critico\n");
+                    printf("Critical error\n");
                     exit(EXIT_FAILURE);
                 }
             }

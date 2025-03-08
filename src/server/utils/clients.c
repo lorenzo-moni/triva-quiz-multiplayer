@@ -8,9 +8,9 @@
 #include "utils.h"
 
 /**
- * @brief Gestisce l'inizializzazione delle informazioni relative ai clients che si possono connettere al sistema
+ * @brief Initializes the information related to the clients that can connect to the system
  *
- * @param clientsInfo puntatore alla struttura con le informazioni sui clients
+ * @param clientsInfo pointer to the structure containing the clients' information
  */
 void init_clients_info(ClientsInfo *clientsInfo)
 {
@@ -18,20 +18,21 @@ void init_clients_info(ClientsInfo *clientsInfo)
     clientsInfo->clients_head = clientsInfo->clients_tail = NULL;
     clientsInfo->max_fd = 0;
 }
+
 /**
- * @brief Crea un nuovo nodo di tipo client
+ * @brief Creates a new client node
  *
- * Questa funzione si occupa di inizializzare un nuovo client che si è connesso al sistema
- * In particolare si inizializza l'array contente tutti gli oggetti RankingNode relativi alle partite del client
+ * This function initializes a new client that has connected to the system.
+ * In particular, it initializes the array containing all the RankingNode objects related to the client's games.
  *
- * @param client_fd file descriptor del socket del client
- * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
- * @return struttura di tipo Client relativa al nuovo client connesso
+ * @param client_fd file descriptor of the client's socket
+ * @param quizzesInfo pointer to the structure containing the quiz information
+ * @return Client structure representing the new connected client
  */
 Client *create_client_node(int client_fd, QuizzesInfo *quizzesInfo)
 {
     Client *new_client = (Client *)malloc(sizeof(Client));
-    handle_malloc_error(new_client, "Errore nell'allocazione della memoria per il nuovo client");
+    handle_malloc_error(new_client, "Memory allocation error for the new client");
     new_client->client_rankings = NULL;
     new_client->nickname = NULL;
     new_client->next_node = new_client->prev_node = NULL;
@@ -39,21 +40,22 @@ Client *create_client_node(int client_fd, QuizzesInfo *quizzesInfo)
     new_client->socket_fd = client_fd;
     new_client->state = LOGIN;
     new_client->client_rankings = malloc(quizzesInfo->total_quizzes * sizeof(RankingNode *));
-    handle_malloc_error(new_client->client_rankings, "Errore nell'allocazione della memoria per i ranking del nuovo client");
+    handle_malloc_error(new_client->client_rankings, "Memory allocation error for the new client's rankings");
     memset(new_client->client_rankings, 0, quizzesInfo->total_quizzes * sizeof(RankingNode *));
     return new_client;
 }
+
 /**
- * @brief Aggiunge una struttura di tipo Client alla lista dei client connessi
+ * @brief Adds a Client structure to the list of connected clients
  *
- * Questa funzione si occupa di inserire il nodo client in coda alla lista doppiamente concatenata dei client attivi sul sistema
+ * This function inserts the client node at the tail of the doubly linked list of active clients in the system.
  *
- * @param node puntatore alla struttura Client da inserire
- * @param clientsInfo puntatore alla struttura che contiene le informazioni sui clients
+ * @param node pointer to the Client structure to insert
+ * @param clientsInfo pointer to the structure containing the clients' information
  */
 void add_client(Client *node, ClientsInfo *clientsInfo)
 {
-    // devo gestire il caso in cui si abbia il numero massimo di clients
+    // Handle the case when the maximum number of clients is reached
     if (!node)
         return;
 
@@ -66,11 +68,12 @@ void add_client(Client *node, ClientsInfo *clientsInfo)
     node->prev_node = clientsInfo->clients_tail;
     clientsInfo->clients_tail = node;
 }
+
 /**
- * @brief Rimuove e dealloca una struttura di tipo Client alla lista dei client connessi
+ * @brief Removes and deallocates a Client structure from the list of connected clients
  *
- * @param node puntatore alla struttura Client da rimuovere e deallocare
- * @param clientsInfo puntatore alla struttura che contiene le informazioni sui clients
+ * @param node pointer to the Client structure to remove and deallocate
+ * @param clientsInfo pointer to the structure containing the clients' information
  */
 void remove_client(Client *node, ClientsInfo *clientsInfo)
 {
@@ -95,10 +98,11 @@ void remove_client(Client *node, ClientsInfo *clientsInfo)
     free(node->client_rankings);
     free(node);
 }
+
 /**
- * @brief Rimuove e dealloca tutti i clients all'interno della lista dei clients connessi al sistema
+ * @brief Removes and deallocates all clients from the list of clients connected to the system
  *
- * @param clientsInfo puntatore alla struttura che contiene le informazioni sui clients
+ * @param clientsInfo pointer to the structure containing the clients' information
  */
 void deallocate_clients(ClientsInfo *clientsInfo)
 {
@@ -116,55 +120,52 @@ void deallocate_clients(ClientsInfo *clientsInfo)
 }
 
 /**
- * @brief Controlla se il buffer payload ha abbastanza spazio al suo interno e nel caso lo rialloca
+ * @brief Checks if the payload buffer has enough space and reallocates it if necessary
  *
- * Questa funzione viene utilizzata per fare in modo da non generare buffer overflow nelle funzioni
- * send_quiz_list e send_ranking che usano il binary protocol e la serializzazione per inviare la lista dei quiz
- * e i ranking rispettivamente.
+ * This function is used to prevent buffer overflow in the functions send_quiz_list and send_ranking,
+ * which use the binary protocol and serialization to send the quiz list and rankings respectively.
  *
- * La funzione va a controllare se la quantità di spazio rimasto nel buffer, dato da *pointer - *payload è sufficiente a contenere le informazioni che
- * vi si vogliono copiare dentro, di dimensione extra_size.
+ * The function checks whether the remaining space in the buffer, given by *pointer - *payload, is sufficient to hold the data to be copied,
+ * with an additional extra_size.
  *
- * Se questo spazio non necessario si duplica la dimensione del buffer finché non si riesce a coprire tutto il buffer e si rialloca il buffer payload
- * tramite realloc.
+ * If the available space is insufficient, it doubles the buffer size until the required space is met, and then reallocates the payload buffer using realloc.
  *
- * @param payload puntatore a puntatore all'indirizzo iniziale del buffer
- * @param pointer puntatore a puntatore all'indirizzo correntemente in uso del buffer
- * @param buffer_size puntatore alla dimensione corrente del buffer
- * @param extra_size quantità di spazio aggiuntiva necessaria
+ * @param payload pointer to a pointer to the start of the buffer
+ * @param pointer pointer to a pointer to the current position in the buffer
+ * @param buffer_size pointer to the current size of the buffer
+ * @param extra_size additional space required
  */
-
 void ensure_capacity(char **payload, char **pointer, size_t *buffer_size, size_t extra_size)
 {
-    // calcolo lo spazio già usato e quello necessario
+    // Calculate the used space and the required space
     size_t used_size = *pointer - *payload;
     size_t required_size = used_size + extra_size;
 
-    // se abbiamo già abbastanza spazio non faccio nulla
+    // If there is already enough space, do nothing
     if (required_size <= *buffer_size)
         return;
 
-    // altrimenti raddoppio la dimensione finché non abbiamo lo spazio necessario
+    // Otherwise, double the buffer size until the required space is available
     size_t new_size = *buffer_size;
     while (new_size < required_size)
         new_size *= 2;
 
-    // rialloco il payload
+    // Reallocate the payload
     char *new_payload = (char *)realloc(*payload, new_size);
-    handle_malloc_error(new_payload, "Errore nella riallocazione del payload");
+    handle_malloc_error(new_payload, "Error reallocating payload");
 
-    // ripristino i valori per la funzione chiamante
+    // Restore the values for the calling function
     *payload = new_payload;
     *pointer = new_payload + used_size;
     *buffer_size = new_size;
 }
 
 /**
- * @brief Invia un messaggio al client per richiedere l'username
+ * @brief Sends a message to the client to request the username
  *
- * Questa funzione si occupa di inviare al client con socket client_fd un messaggio di tipo MSG_REQ_NICKNAME
+ * This function sends a MSG_REQ_NICKNAME message to the client using the client_fd socket.
  *
- * @param client_fd file descriptor del client a cui richiedere l'username
+ * @param client_fd file descriptor of the client from which the username is requested
  */
 void request_client_nickname(int client_fd)
 {
@@ -173,20 +174,19 @@ void request_client_nickname(int client_fd)
 }
 
 /**
- * @brief Gestisce la connessione di un nuovo client al sistema
+ * @brief Handles the connection of a new client to the system
  *
- * Questa funzione viene invocata quando vi è una nuova connessione sul socket del server
- * e si occupa di accettare la connessione e di creare tutte le strutture dati necessarie
- * per gestire il nuovo client
+ * This function is invoked when a new connection is detected on the server socket.
+ * It accepts the connection and creates all the necessary data structures to manage the new client.
  *
- * @param context puntatore alla struttura che contiene le informazioni sul contesto del servizio
+ * @param context pointer to the structure that contains the service context information
  */
 void handle_new_client_connection(Context *context)
 {
     struct sockaddr_in client_address;
     int client_fd;
     socklen_t address_size = sizeof(client_address);
-    // accettiamo la connessione
+    // Accept the connection
     client_fd = accept(context->server_fd, (struct sockaddr *)&client_address, &address_size);
     if (client_fd == -1)
     {
@@ -195,43 +195,42 @@ void handle_new_client_connection(Context *context)
         else
             exit(EXIT_FAILURE);
     }
-    // aggiungo il file descriptor al set master
+    // Add the file descriptor to the master set
     FD_SET(client_fd, &context->masterfds);
-    // aggiorno max_fd
+    // Update max_fd
     if (client_fd > context->clientsInfo.max_fd)
         context->clientsInfo.max_fd = client_fd;
 
-    // creo il nodo client e lo aggiungo in coda alla lista
+    // Create the client node and add it to the list
     Client *client = create_client_node(client_fd, &context->quizzesInfo);
     add_client(client, &context->clientsInfo);
 
-    // invio il messaggio di richiesta dell'username
+    // Send the username request message to the client
     request_client_nickname(client_fd);
 }
 
 /**
- * @brief Invia al client la lista dei quiz disponibili
+ * @brief Sends the list of available quizzes to the client
  *
- * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_REQ_QUIZ_LIST e si occupa di effettuare la serializzazione utilizzando binary protocol
- * della lista dei quiz disponibili e di inviarli al client.
+ * This function responds to a MSG_REQ_QUIZ_LIST message by serializing the list of available quizzes using the binary protocol
+ * and sending them to the client.
  *
- * In particolare utilizzo la funzione htons per confertire da host byte order a network byte order
- * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità.
+ * In particular, it uses the htons function to convert data from host byte order to network byte order,
+ * and uses standardized uint16_t types to ensure portability.
  *
- * I dati relativi ai quiz disponibili verranno serializzati secondo questo formato binary:
- * (numero quizzes) [(lunghezza nome)(nome)] [(lunghezza nome)(nome)] [...]
- * dove le parentesi danno un'idea del livello di annidamento e chiaramente non sono incluse nei dati inviati.
+ * The quiz data will be serialized in the following binary format:
+ * (number of quizzes) [(name length)(name)] [(name length)(name)] [...]
+ * where the parentheses indicate the level of nesting and are not actually part of the transmitted data.
  *
- *
- * @param client puntatore al client a cui inviare la lista
- * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
+ * @param client pointer to the client to which the list is sent
+ * @param quizzesInfo pointer to the structure containing the quiz information
  */
 void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 {
-    // creiamo un payload per il nostro pacchetto di dimensione standard
+    // Create a payload for our packet with a standard size
     size_t buffer_size = DEFAULT_PAYLOAD_SIZE;
     char *payload = (char *)malloc(buffer_size);
-    handle_malloc_error(payload, "Errore nell'allocazione del payload");
+    handle_malloc_error(payload, "Error allocating payload");
     int payload_size;
 
     char *pointer = payload;
@@ -239,7 +238,7 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
     uint16_t net_string_len;
     Quiz *quiz;
 
-    // inserisco nel buffer il numero totale di quiz disponibili assicurandomi che all'interno del buffer ci sia abbastanza spazio
+    // Insert the total number of available quizzes into the buffer, ensuring there is enough space
     uint16_t net_strings_num = htons(quizzesInfo->total_quizzes);
     ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t));
     memcpy(pointer, &net_strings_num, sizeof(uint16_t));
@@ -251,15 +250,14 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
         string_len = strlen(quiz->name);
         net_string_len = htons(string_len);
 
-        // gestisco la situazione in cui il buffer payload precedentemente allocato
-        // non è abbastanza capiente
+        // Handle the case where the previously allocated payload buffer is not large enough
         ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t) + string_len);
 
-        // copio nel buffer la dimensione della stringa
+        // Copy the string length into the buffer
         memcpy(pointer, &net_string_len, sizeof(uint16_t));
         pointer += sizeof(uint16_t);
 
-        // copio nel buffer la stringa
+        // Copy the string into the buffer
         memcpy(pointer, quiz->name, string_len);
         pointer += string_len;
     }
@@ -268,27 +266,27 @@ void send_quiz_list(Client *client, QuizzesInfo *quizzesInfo)
 
     client->state = SELECTING_QUIZ;
 
-    // invio il messaggio serializzato
+    // Send the serialized message
     send_msg(client->socket_fd, MSG_RES_QUIZ_LIST, payload, payload_size);
     free(payload);
 }
 
 /**
- * @brief Controlla la validità del nickname fornito dal client
+ * @brief Checks the validity of the nickname provided by the client
  *
- * Questa funzione viene invocata in seguito alla ricezione di un messaggio di tipo MSG_SET_NICKNAME dal client e
- * si occupa di controllare se questo è valido o meno controllando la sua unicità
+ * This function is invoked after receiving a MSG_SET_NICKNAME message from the client
+ * and checks whether the nickname is valid by verifying its uniqueness.
  *
- * @param client puntatore al client che ha inviato il nickname
- * @param received_msg puntatore al messaggio ricevuto
- * @param clientsInfo puntatore alla struttura con le informazioni sui clients
+ * @param client pointer to the client that sent the nickname
+ * @param received_msg pointer to the received message
+ * @param clientsInfo pointer to the structure containing the clients' information
  */
 void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *clientsInfo)
 {
     char *selected_nickname = received_msg->payload;
     bool found = 0;
 
-    // eseguo una ricerca lineare tra i client a cui è già stato associato un nickname
+    // Perform a linear search among clients that already have an associated nickname
     Client *current_client = clientsInfo->clients_head;
     while (current_client != NULL)
     {
@@ -301,10 +299,10 @@ void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *
     }
     if (found)
     {
-        // se il nickname è già utilizzato invio un messaggio che indica la situazione
+        // If the nickname is already in use, send a message indicating the situation
         char *message = "Nickname già in uso";
         send_msg(client->socket_fd, MSG_INFO, message, strlen(message));
-        // richiedo nuovamente al client di fornire un nickname valido
+        // Request a valid nickname from the client again
         request_client_nickname(client->socket_fd);
         return;
     }
@@ -312,32 +310,33 @@ void handle_client_nickname(Client *client, Message *received_msg, ClientsInfo *
     client->state = LOGGED_IN;
     clientsInfo->connected_clients += 1;
     client->nickname = malloc(strlen(selected_nickname) + 1);
-    handle_malloc_error(client->nickname, "Errore nell'allocazione della memoria per il nickname del client");
+    handle_malloc_error(client->nickname, "Error allocating memory for the client's nickname");
     strcpy(client->nickname, selected_nickname);
 
-    // invio il messaggio di nickname corretto al client
+    // Send the correct nickname confirmation message to the client
     send_msg(client->socket_fd, MSG_OK_NICKNAME, "", 0);
 }
+
 /**
- * @brief Gestisce la disconnessione di un client
+ * @brief Handles the disconnection of a client
  *
- * Questa funzione va a gestire la disconnessione di un client che può avvenire esplicitamente tramite l'invio di un messaggio MSG_DISCONNECT
- * oppure implicitamente attraverso la chiusura diretta del socket
+ * This function manages the disconnection of a client, which can occur either explicitly through a MSG_DISCONNECT message
+ * or implicitly through direct socket closure.
  *
- * @param client puntatore al client che si vuole disconnettere
- * @param context puntatore alla struttura che contiene le informazioni sul contesto del servizio
+ * @param client pointer to the client to disconnect
+ * @param context pointer to the structure containing the service context information
  */
 void handle_client_disconnection(Client *client, Context *context)
 {
-    // rimuovo il client dal set dei descrittori attivi e chiudo il socket
+    // Remove the client from the active file descriptor set and close the socket
     FD_CLR(client->socket_fd, &context->masterfds);
     close(client->socket_fd);
 
-    // rimuovo tutte le classifiche del client
+    // Remove all of the client's ranking entries
     for (uint16_t i = 0; i < context->quizzesInfo.total_quizzes; i++)
         remove_ranking(client->client_rankings[i], context->quizzesInfo.quizzes[i]);
 
-    // aggiorno max_fd
+    // Update max_fd
     if (client->socket_fd == context->clientsInfo.max_fd)
     {
         Client *current_client = context->clientsInfo.clients_head;
@@ -355,33 +354,34 @@ void handle_client_disconnection(Client *client, Context *context)
         context->clientsInfo.connected_clients--;
     remove_client(client, &context->clientsInfo);
 }
+
 /**
- * @brief Invia la domanda corrente al client
+ * @brief Sends the current quiz question to the client
  *
- * Questa funzione invia al client un messaggio di tipo MSG_QUIZ_QUESTION che contiene la successiva domanda del quiz a cui
- * sta partecipando
+ * This function sends a MSG_QUIZ_QUESTION message to the client containing the next question of the quiz they are participating in.
  *
- * @param client puntatore al client a cui inviare la domanda
- * @param quiz puntatore alla struttura che contiene le informazioni sul quiz
+ * @param client pointer to the client to whom the question is sent
+ * @param quiz pointer to the structure containing the quiz information
  */
 void send_quiz_question(Client *client, Quiz *quiz)
 {
     uint16_t question_to_send_id = client->client_rankings[client->current_quiz_id]->current_question;
     if (question_to_send_id >= quiz->total_questions)
         return;
-    // si seleziona la domanda corretta da inviare e si invia al client
+    // Select the correct question to send and send it to the client
     char *question_to_send = quiz->questions[question_to_send_id]->question;
 
     send_msg(client->socket_fd, MSG_QUIZ_QUESTION, question_to_send, strlen(question_to_send));
 }
+
 /**
- * @brief Verifica la risposta del client
+ * @brief Verifies the client's answer
  *
- * Questa funzione controlla se la risposta si trova tra le risposte possibili per quella domanda
- * Si noti che le risposte sono case insensitive
+ * This function checks if the answer is among the possible answers for that question.
+ * Note that the answers are case insensitive.
  *
- * @param answer puntatore alla risposta del client
- * @param quiz puntatore alla struttura che contiene la domanda del quiz
+ * @param answer pointer to the client's answer
+ * @param question pointer to the structure containing the quiz question
  */
 bool verify_quiz_answer(char *answer, QuizQuestion *question)
 {
@@ -390,31 +390,32 @@ bool verify_quiz_answer(char *answer, QuizQuestion *question)
             return true;
     return false;
 }
+
 /**
- * @brief Gestisce il messaggio di risposta ad una domanda del quiz del client
+ * @brief Handles the client's answer message for a quiz question
  *
- * Questa funzione viene invocata in seguito alla ricezione di un messaggio di tipo MSG_QUIZ_ANSWER dal client
- * e si occupa di andare a controllare la correttezza della risposta, di notificare l'esito al client tramite un messaggio
- * MSG_INFO e di aggiornare la classifica relativa al quiz nel caso della correttezza della risposta.
- * Inoltre si occupa di inviare la domanda successiva nel caso in cui il quiz non sia terminato, altrimenti invia nuovamente la lista dei quiz
+ * This function is invoked after receiving a MSG_QUIZ_ANSWER message from the client.
+ * It checks the correctness of the answer, notifies the client of the result via a MSG_INFO message,
+ * and updates the quiz ranking if the answer is correct.
+ * Additionally, it sends the next question if the quiz is not finished; otherwise, it sends the quiz list again.
  *
- * @param client puntatore al client che ha inviato la risposta
- * @param msg puntatore al messaggio che contiene la risposta
- * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
+ * @param client pointer to the client that sent the answer
+ * @param msg pointer to the message containing the answer
+ * @param quizzesInfo pointer to the structure containing the quiz information
  */
 void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 {
     char *user_answer = msg->payload;
-    // prelevo il RankingNode relativo al quiz per cui il client ha fornito una risposta
+    // Retrieve the RankingNode related to the quiz for which the client provided an answer
     RankingNode *current_ranking = client->client_rankings[client->current_quiz_id];
-    // prelevo il quiz che sta giocando il client
+    // Retrieve the quiz the client is playing
     Quiz *playing_quiz = quizzesInfo->quizzes[client->current_quiz_id];
-    // prelevo la domanda corrente a cui ha risposto il client
+    // Retrieve the current question that the client answered
     QuizQuestion *current_question = playing_quiz->questions[current_ranking->current_question];
     char *payload;
 
     bool correct_answer = verify_quiz_answer(user_answer, current_question);
-    // nel caso in cui la risposta è corretta aggiorno il punteggio del client e aggiorno la classifica
+    // If the answer is correct, update the client's score and the ranking
     if (correct_answer)
     {
         payload = "Risposta corretta";
@@ -427,7 +428,7 @@ void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
     send_msg(client->socket_fd, MSG_INFO, payload, strlen(payload));
 
     current_ranking->current_question += 1;
-    // se il client ha terminato il quiz invio la lista dei quiz disponibili, altrimenti la domanda successiva
+    // If the client has finished the quiz, send the list of available quizzes; otherwise, send the next question
     if (current_ranking->current_question == playing_quiz->total_questions)
     {
         current_ranking->is_quiz_completed = true;
@@ -439,15 +440,16 @@ void handle_quiz_answer(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
     else
         send_quiz_question(client, playing_quiz);
 }
+
 /**
- * @brief Gestisce la selezione di un quiz da parte del client
+ * @brief Handles the quiz selection by the client
  *
- * Questa funzione viene invocata in seguito alla ricezione di un messaggio di tipo MSG_QUIZ_SELECT dal client
- * e si occupa di andare ad inizializzare le strutture dati necessarie per la sessione di quiz
+ * This function is invoked after receiving a MSG_QUIZ_SELECT message from the client,
+ * and it initializes the necessary data structures for the quiz session.
  *
- * @param client puntatore al client che ha selezionato il quiz
- * @param msg puntatore al messaggio che contiene il quiz selezionato
- * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
+ * @param client pointer to the client who selected the quiz
+ * @param msg pointer to the message containing the selected quiz
+ * @param quizzesInfo pointer to the structure containing the quiz information
  */
 void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInfo)
 {
@@ -455,9 +457,9 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
     memcpy(&net_selected_quiz_number, msg->payload, sizeof(net_selected_quiz_number));
     selected_quiz_number = ntohs(net_selected_quiz_number);
 
-    // Gestisco le possibili situazioni di errore
+    // Handle possible error situations
 
-    // Il quiz indicato non è disponibile
+    // The indicated quiz is not available
     if (selected_quiz_number > quizzesInfo->total_quizzes || selected_quiz_number == 0)
     {
         char *message = "Quiz selezionato non valido";
@@ -466,7 +468,7 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
         return;
     }
 
-    // L'utente corrente ha già completato il quiz durante la sessione corrente
+    // The current user has already completed the quiz during this session
     if (client->client_rankings[selected_quiz_number - 1] != NULL)
     {
         char *message = "Il quiz selezionato è già stato completato in questa sessione";
@@ -477,89 +479,89 @@ void handle_quiz_selection(Client *client, Message *msg, QuizzesInfo *quizzesInf
     }
     client->current_quiz_id = selected_quiz_number - 1;
 
-    // Inizializzo le informazioni relative al ranking
+    // Initialize the ranking information
     Quiz *selected_quiz = quizzesInfo->quizzes[selected_quiz_number - 1];
     selected_quiz->total_clients += 1;
     RankingNode *new_node = create_ranking_node(client);
     client->client_rankings[client->current_quiz_id] = new_node;
 
-    // inserisco il nodo nella lista doppiamente concatenata relativa al ranking del quiz
+    // Insert the node into the doubly linked ranking list for the quiz
     insert_ranking_node(selected_quiz, new_node);
 
     client->state = PLAYING;
 
-    // invio al client un messaggio relativo al fatto che ha selezionato un quiz corretto
+    // Send the client a message confirming that a valid quiz has been selected
     send_msg(client->socket_fd, MSG_QUIZ_SELECTED, selected_quiz->name, strlen(selected_quiz->name));
 
-    // invio al client la prima domanda
+    // Send the first question to the client
     send_quiz_question(client, selected_quiz);
 }
+
 /**
- * @brief Invia al client la classifica per ogni quiz
+ * @brief Sends the ranking for each quiz to the client
  *
- * Questa funzione viene invocata in seguito alla ricezione di un messaggio di tipo MSG_REQ_RANKING dal client e
- * si occupa di effettuare la serializzazione utilizzando binary protocol della classifica dei clients per ogni quiz e di inviarla al client.
+ * This function is invoked after receiving a MSG_REQ_RANKING message from the client,
+ * and it serializes the clients' ranking for each quiz using the binary protocol and sends it to the client.
  *
- * In particolare utilizzo la funzione htons per convertire i dati da host byte order a network byte order
- * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità
+ * In particular, it uses the htons function to convert data from host byte order to network byte order,
+ * and uses standardized uint16_t types to ensure portability.
  *
- * I dati relativi al ranking dei quiz verranno serializzati secondo questo formato binary protocol
- * (numero quizzes)  {(numero utenti partecipanti al quiz) [(lunghezza nome) (nome) (score)]} {...}
- * dove le parentesi danno un'idea del livello di annidamento e chiaramente non sono incluse nei dati inviati
+ * The quiz ranking data will be serialized in the following binary protocol format:
+ * (number of quizzes)  {(number of users participating in the quiz) [(name length) (name) (score)]} {...}
+ * where the parentheses indicate the level of nesting and are not actually part of the transmitted data.
  *
- * @param client puntatore al client a cui inviare il ranking
- * @param quizzesInfo puntatore alla struttura che contiene le informazioni sui quiz
+ * @param client pointer to the client to which the ranking is sent
+ * @param quizzesInfo pointer to the structure containing the quiz information
  */
 void send_ranking(Client *client, QuizzesInfo *quizzesInfo)
 {
-    // alloco un buffer di dimensione standard che potrà essere ampliato
+    // Allocate a standard-sized buffer that can be expanded if needed
     size_t buffer_size = DEFAULT_PAYLOAD_SIZE;
     char *payload = (char *)malloc(buffer_size);
-    handle_malloc_error(payload, "Errore nell'allocazione del payload");
+    handle_malloc_error(payload, "Error allocating payload");
 
-    // alloco le strutture dati necessarie
+    // Allocate the necessary data structures
     char *pointer = payload;
     size_t string_len;
     uint16_t net_string_len, net_client_score, net_clients_per_quiz;
     int payload_size;
 
-    // inserisco il numero totale di quizzes per cui dobbiamo stampare la classifica
+    // Insert the total number of quizzes for which the ranking will be printed
     uint16_t net_quizzes_num = htons(quizzesInfo->total_quizzes);
     ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t));
     memcpy(pointer, &net_quizzes_num, sizeof(uint16_t));
     pointer += sizeof(uint16_t);
 
-    // per ogni quiz inserisco in ordine: numero di utenti che hanno partecipato,
-    // e per ogni utente lunghezza nome, nome e score
+    // For each quiz, insert in order: the number of users participating,
+    // and for each user, the length of the nickname, the nickname, and the score
     for (uint16_t i = 0; i < quizzesInfo->total_quizzes; i++)
     {
         Quiz *quiz = quizzesInfo->quizzes[i];
-        // inserisco il numero di clients in classifica per il quiz
+        // Insert the number of clients in the ranking for the quiz
         net_clients_per_quiz = htons(quiz->total_clients);
         ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t));
         memcpy(pointer, &net_clients_per_quiz, sizeof(uint16_t));
         pointer += sizeof(uint16_t);
 
         RankingNode *current = quiz->ranking_head;
-        // vado a scorrere la lista della classifica relativa al quiz
+        // Traverse the ranking list for the quiz
         while (current)
         {
             string_len = strlen(current->client->nickname);
             net_string_len = htons(string_len);
 
-            // gestisco la situazine in cui il buffer allocato non è abbastanza grande da contenere
-            // le informazioni
+            // Handle the situation where the allocated buffer is not large enough
             ensure_capacity(&payload, &pointer, &buffer_size, sizeof(uint16_t) + string_len + sizeof(uint16_t));
 
-            // inserisco la lunghezza del nickname del cliente corrente
+            // Insert the length of the current client's nickname
             memcpy(pointer, &net_string_len, sizeof(uint16_t));
             pointer += sizeof(uint16_t);
 
-            // inserisco il client nickname corrente
+            // Insert the current client's nickname
             memcpy(pointer, current->client->nickname, string_len);
             pointer += string_len;
 
-            // inserisco lo score del client corrente
+            // Insert the current client's score
             net_client_score = htons(current->score);
             memcpy(pointer, &net_client_score, sizeof(uint16_t));
             pointer += sizeof(uint16_t);
@@ -567,20 +569,20 @@ void send_ranking(Client *client, QuizzesInfo *quizzesInfo)
         }
     }
     payload_size = pointer - payload;
-    // invio il payload al client in un messaggio MSG_RES_RANKING
+    // Send the payload to the client in a MSG_RES_RANKING message
     send_msg(client->socket_fd, MSG_RES_RANKING, payload, payload_size);
 
     free(payload);
 
-    // in base allo stato in cui si trova il client vado ad inviare un messaggio diverso
+    // Based on the client's current state, send a different message
     switch (client->state)
     {
     case PLAYING:
-        // nel caso in cui sia in una sessione di quiz invio la domanda a cui deve rispondere
+        // If the client is in a quiz session, send the question to answer
         send_quiz_question(client, quizzesInfo->quizzes[client->current_quiz_id]);
         break;
     case SELECTING_QUIZ:
-        // nel caso in cui sia nella selezione del quiz invio la lista dei quiz
+        // If the client is selecting a quiz, send the list of quizzes
         send_quiz_list(client, quizzesInfo);
         break;
     default:
@@ -589,16 +591,16 @@ void send_ranking(Client *client, QuizzesInfo *quizzesInfo)
 }
 
 /**
- * @brief Gestisce la ricezione di un messaggio da parte di un client
+ * @brief Handles the reception of a message from a client
  *
- * Questa funzione viene invocata ogni volta che un socket viene inserito all'interno del set readfds e va a gestire la richiesta del client
- * in base a quello che il tipo del messaggio ricevuto.
+ * This function is invoked each time a socket is added to the readfds set, and it handles the client's request
+ * based on the type of the received message.
  *
- * Tramite la funzione receive_msg si ottiene il messaggio inviato dal client, si gestiscono eventuali disconnessioni ed errori che si possono verificare
- * durante la trasmissione
+ * Using the receive_msg function, it obtains the message sent by the client and handles any disconnections or errors
+ * that may occur during transmission.
  *
- * @param client puntatore al client che è stato inserito in readfds
- * @param context puntatore alla struttura che contiene le informazioni sul contesto del servizio
+ * @param client pointer to the client that has been added to readfds
+ * @param context pointer to the structure containing the service context information
  */
 void handle_client(Client *client, Context *context)
 {
@@ -606,7 +608,7 @@ void handle_client(Client *client, Context *context)
     int res = receive_msg(client->socket_fd, &received_msg);
     if (res == 0)
     {
-        printf("Il client ha chiuso la connessione in modo ordinato\n");
+        printf("The client closed the connection gracefully\n");
         handle_client_disconnection(client, context);
         return;
     }
@@ -614,13 +616,13 @@ void handle_client(Client *client, Context *context)
     {
         if (errno == ECONNRESET || errno == ETIMEDOUT || errno == EPIPE)
         {
-            printf("Il client ha chiuso la connessione in modo anomalo\n");
+            printf("The client closed the connection abnormally\n");
             handle_client_disconnection(client, context);
             return;
         }
         else
         {
-            printf("Errore critico nel server\n");
+            printf("Critical error on the server\n");
             exit(EXIT_FAILURE);
         }
     }

@@ -7,14 +7,14 @@
 #include "../../common/params.h"
 
 /**
- * @brief Gestisce la selezione del nickname da parte dell'utente
+ * @brief Handles the user's nickname selection
  *
- * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_REQ_NICKNAME, tramite il quale il server richiede all'utente di inserire un nickname.
- * Questa funzione gestisce grazie a get_console_input i casi in cui il valore inserito superi la dimensione del buffer o sia vuoto e invia il nickname selezionato
- * al server tramite un messaggio di tipo MSG_SET_NICKNAME
+ * This function responds to the arrival of a MSG_REQ_NICKNAME message, through which the server requests the user to enter a nickname.
+ * It handles cases where the input exceeds the buffer size or is empty using get_console_input, and sends the selected nickname
+ * to the server via a MSG_SET_NICKNAME message.
  *
- * @param server_fd file descriptor del socket del server
- * @param msg puntatore al messaggio che contiene il messaggio da visualizzare
+ * @param server_fd file descriptor of the server socket
+ * @param msg pointer to the message containing the text to display
  */
 void handle_nickname_selection(int server_fd, Message *msg)
 {
@@ -25,13 +25,14 @@ void handle_nickname_selection(int server_fd, Message *msg)
 
     send_msg(server_fd, MSG_SET_NICKNAME, nickname, strlen(nickname));
 }
+
 /**
- * @brief Gestisce la selezione del nickname da parte dell'utente
+ * @brief Handles nickname confirmation and requests the available quiz list
  *
- * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_OK_NICKNAME, tramite il quale il server comunica all'utente che il nickname è stato accettato.
- * Si risponde inviando una richiesta al server per ottenere la lista dei quiz disponibili tramite un messaggio di tipo MSG_REQ_QUIZ_LIST
+ * This function responds to the arrival of a MSG_OK_NICKNAME message, through which the server informs the user that the nickname has been accepted.
+ * It responds by sending a request to the server for the list of available quizzes via a MSG_REQ_QUIZ_LIST message.
  *
- * @param server_fd file descriptor del socket del server
+ * @param server_fd file descriptor of the server socket
  */
 void request_available_quizzes(int server_fd)
 {
@@ -39,32 +40,31 @@ void request_available_quizzes(int server_fd)
 }
 
 /**
- * @brief Gestisce la deserializzazione e la visualizzazione della lista dei quiz disponibili
+ * @brief Handles the deserialization and display of the list of available quizzes
  *
- * Questa funzione si occupa di effettuare la deserializzazione utilizzando binary protocol
- * della lista dei quiz disponibili ricevita dal server.
+ * This function is responsible for deserializing, using a binary protocol, the list of available quizzes received from the server.
  *
- * In particolare utilizzo la funzione ntohs per confertire da network byte order a host byte order
- * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità.
+ * In particular, it uses the ntohs function to convert from network byte order to host byte order
+ * and utilizes standardized uint16_t types to ensure portability.
  *
- * I dati relativi ai quiz disponibili vengono ricevuti secondo questo formato binary
- * (numero quizzes) [(lunghezza nome)(nome)] [(lunghezza nome)(nome)] [...]
- * dove le parentesi danno un'idea del livello di annidamento e chiaramente non sono incluse nei dati inviati.
+ * The data regarding available quizzes is received according to this binary format:
+ * (number of quizzes) [(name length)(name)] [(name length)(name)] [...]
+ * where the parentheses indicate the level of nesting and are not actually part of the transmitted data.
  *
- * @param msg puntatore al messaggio nel cui payload si trova la lista dei quiz serializzata
+ * @param msg pointer to the message whose payload contains the serialized list of quizzes
  */
 void display_quiz_list(Message *msg)
 {
-    // inizializzo le strutture dati
+    // initialize data structures
     char *pointer = msg->payload;
     size_t string_len;
     uint16_t net_strings_num, net_string_len, total_quizzes;
     memcpy(&net_strings_num, pointer, sizeof(uint16_t));
     pointer += sizeof(uint16_t);
-    // prelievo e converto dal buffer il numero totale dei quiz e effettuo un loop
+    // retrieve and convert from the buffer the total number of quizzes, then loop through them
     total_quizzes = ntohs(net_strings_num);
 
-    printf("\nQuiz disponibili\n");
+    printf("\nAvailable Quizzes\n");
     printf("+++++++++++++++++++++++++++\n");
 
     for (uint16_t i = 0; i < total_quizzes; i++)
@@ -82,26 +82,26 @@ void display_quiz_list(Message *msg)
 }
 
 /**
- * @brief Gestisce la deserializzazione e la visualizzazione della classifica
+ * @brief Handles the deserialization and display of the ranking
  *
- * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_RES_RANKING e si occupa di effettuare la deserializzazione utilizzando binary protocol
- * della classifica per ogni quiz ricevuta dal server.
+ * This function responds to the arrival of a MSG_RES_RANKING message and is responsible for deserializing, using a binary protocol,
+ * the ranking for each quiz received from the server.
  *
- * In particolare utilizzo la funzione ntohs per confertire da network byte order a host byte order
- * e utilizzo i tipi standardizzati uint16_t per garantire la portabilità.
+ * In particular, it uses the ntohs function to convert from network byte order to host byte order
+ * and utilizes standardized uint16_t types to ensure portability.
  *
- * I dati relativi al ranking dei quiz vengono ricevuti secondo questo formato binary protocol
- * (numero quizzes)  {(numero utenti partecipanti al quiz) [(lunghezza nome) (nome) (score)]} {...}
- * dove le parentesi danno un'idea del livello di annidamento e chiaramente non sono incluse nei dati inviati.
+ * The ranking data for the quizzes is received according to this binary protocol format:
+ * (number of quizzes)  {(number of users participating in the quiz) [(name length) (name) (score)]} {...}
+ * where the parentheses indicate the level of nesting and are not actually part of the transmitted data.
  *
- * @param msg puntatore al messaggio nel cui payload si trova la classifica serializzata
+ * @param msg pointer to the message whose payload contains the serialized ranking
  */
 void handle_rankings(Message *msg)
 {
     char *pointer = msg->payload;
     uint16_t clients_per_quiz, quizzes_num, client_score, string_len;
     uint16_t net_string_len, net_client_score, net_clients_per_quiz, net_quizzes_num;
-    // prelevo il numero totale dei quiz
+    // retrieve the total number of quizzes
     memcpy(&net_quizzes_num, pointer, sizeof(uint16_t));
     quizzes_num = ntohs(net_quizzes_num);
     pointer += sizeof(uint16_t);
@@ -111,38 +111,38 @@ void handle_rankings(Message *msg)
         memcpy(&net_clients_per_quiz, pointer, sizeof(uint16_t));
         clients_per_quiz = ntohs(net_clients_per_quiz);
         pointer += sizeof(uint16_t);
-        // prelevo il numero dei client che stanno partecipando al quiz
-        printf("\nPunteggio Tema %d\n", i + 1);
+        // retrieve the number of clients participating in the quiz
+        printf("\nTheme %d score\n", i + 1);
         for (uint16_t j = 0; j < clients_per_quiz; j++)
         {
-            // prelevo la lunghezza del nickname per il client
+            // retrieve the length of the client's nickname
             memcpy(&net_string_len, pointer, sizeof(uint16_t));
             string_len = ntohs(net_string_len);
             pointer += sizeof(uint16_t);
 
-            // prelevo lo score del client
+            // retrieve the client's score
             memcpy(&net_client_score, pointer + string_len, sizeof(uint16_t));
             client_score = ntohs(net_client_score);
-            // stampo a schermo il nickname e lo score
+            // print the nickname and score to the screen
             printf("- %.*s %d\n", string_len, pointer, client_score);
             pointer += string_len + sizeof(uint16_t);
         }
     }
 }
+
 /**
- * @brief Gestisce la selezione del quiz da parte del client
+ * @brief Handles the client's quiz selection
  *
- * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_RES_QUIZ_LIST, tramite il quale il server comunica all'utente la lista dei quiz in formato serializzato,
- * della cui deserializzazione e stampa a schermo si occupa la funzione display_quiz_list
+ * This function responds to the arrival of a MSG_RES_QUIZ_LIST message, through which the server communicates the serialized list of quizzes to the user,
+ * whose deserialization and display is handled by the display_quiz_list function.
  *
- * La funzione permette all'utente di effettuare una scelta, in particolare il comportamento cambia a seconda del valore digitato dal client
- *  - ENDQUIZ: invio di un messaggio MSG_DISCONNECT che porta il server a deallocare le strutture del client e chiudere la connessione
- *  - SHOWSCORE: invio di un messaggio MSG_REQ_RANKING che porta il server a rispondere con un messaggio di tipo MSG_RES_RANKING e dunque all'invio della classifica
- *  - ELSE: invio di un messaggio MSG_QUIZ_SELECT con payload dato dal valore inserito che permette al client di selezionare il quiz a cui vuole partecipare usando binary protocol
+ * The function allows the user to make a choice; specifically, the behavior changes based on the value entered by the client:
+ *  - ENDQUIZ: sends a MSG_DISCONNECT message that causes the server to deallocate the client's structures and close the connection
+ *  - SHOWSCORE: sends a MSG_REQ_RANKING message that causes the server to respond with a MSG_RES_RANKING message, thus sending the ranking
+ *  - ELSE: sends a MSG_QUIZ_SELECT message with a payload based on the entered value, allowing the client to select the quiz to participate in using the binary protocol
  *
- *
- * @param server_fd file descriptor del socket del server
- * @param msg puntatore al messaggio nel cui payload è contenuta la serializzazione della lista dei quiz
+ * @param server_fd file descriptor of the server socket
+ * @param msg pointer to the message whose payload contains the serialized list of quizzes
  */
 void handle_quiz_selection(int server_fd, Message *msg)
 {
@@ -154,7 +154,7 @@ void handle_quiz_selection(int server_fd, Message *msg)
         display_quiz_list(msg);
 
         do
-            printf("La tua scelta: ");
+            printf("Your choice: ");
         while (get_console_input(answer, sizeof(answer)) == -1);
 
         if (strcmp(answer, ENDQUIZ) == 0)
@@ -168,55 +168,56 @@ void handle_quiz_selection(int server_fd, Message *msg)
             break;
         }
 
-        // strtoul tenta di convertire una stringa ricevuta in un unsigned long int in base 10
-        // endptr viene impostato all'ultimo valore non convertito, dunque può essere usato per
-        // capire se non è stato possibile effettuare la conversione
+        // strtoul tries to convert the received string to an unsigned long int in base 10
+        // endptr is set to the last character that was not converted, so it can be used to
+        // determine if the conversion was unsuccessful
 
         selected_quiz_number = (uint16_t)strtoul(answer, &endptr, 10);
 
-        // Se il valore può essere convertito lo inviamo al server
+        // If the value can be converted, send it to the server
         if (*endptr == '\0')
         {
             net_selected_quiz_number = htons(selected_quiz_number);
             send_msg(server_fd, MSG_QUIZ_SELECT, (char *)&net_selected_quiz_number, sizeof(net_selected_quiz_number));
             break;
         }
-        // altrimenti stampiamo un messaggio di errore dato dalla conversione errata
-        printf("\nQuiz selezionato non valido\n");
+        // otherwise, print an error message due to the failed conversion
+        printf("\nThe selected quiz is not valid\n");
     }
 }
+
 /**
- * @brief Gestisce la ricezione di un messaggio informativo
+ * @brief Handles the reception of an informational message
  *
- * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_INFO
- * Il client stampa a schermo il messaggio
+ * This function responds to the arrival of a MSG_INFO message.
+ * The client prints the message to the screen.
  *
- * @param msg puntatore al messaggio ricevuto
+ * @param msg pointer to the received message
  */
 void handle_message(Message *msg)
 {
     printf("\n%s\n", msg->payload);
 }
+
 /**
- * @brief Gestisce la risposta ad una domanda del quiz da parte del client
+ * @brief Handles the client's response to a quiz question
  *
- * Questa funzione risponde all'arrivo di un messaggio di tipo MSG_QUIZ_QUESTION, tramite il quale il server comunica all'utente la domanda del quiz a cui rispondere
+ * This function responds to the arrival of a MSG_QUIZ_QUESTION message, through which the server communicates the quiz question to the user.
  *
- * La funzione permette all'utente di effettuare una scelta, in particolare il comportamento cambia a seconda del valore digitato dal client
- *  - ENDQUIZ: invio di un messaggio MSG_DISCONNECT che porta il server a deallocare le strutture del client e chiudere la connessione
- *  - SHOWSCORE: invio di un messaggio MSG_REQ_RANKING che porta il server a rispondere con un messaggio di tipo MSG_RES_RANKING e dunque all'invio della classifica
- *  - ELSE: invio di un messaggio MSG_QUIZ_ANSWER con payload dato dal valore inserito che permette al client di rispondere alla domanda
+ * The function allows the user to make a choice; specifically, the behavior changes based on the value entered by the client:
+ *  - ENDQUIZ: sends a MSG_DISCONNECT message that causes the server to deallocate the client's structures and close the connection
+ *  - SHOWSCORE: sends a MSG_REQ_RANKING message that causes the server to respond with a MSG_RES_RANKING message, thus sending the ranking
+ *  - ELSE: sends a MSG_QUIZ_ANSWER message with a payload based on the entered value, allowing the client to answer the question
  *
- *
- * @param server_fd file descriptor del socket del server
- * @param msg puntatore al messaggio ricevuto
+ * @param server_fd file descriptor of the server socket
+ * @param msg pointer to the received message
  */
 void handle_quiz_question(int server_fd, Message *msg)
 {
     char answer[DEFAULT_PAYLOAD_SIZE];
     printf("\n%s\n", msg->payload);
     do
-        printf("Risposta: ");
+        printf("Answer: ");
     while (get_console_input(answer, sizeof(answer)) == -1);
 
     if (strcmp(answer, ENDQUIZ) == 0)

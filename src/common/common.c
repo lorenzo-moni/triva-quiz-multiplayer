@@ -7,15 +7,14 @@
 #include "common.h"
 
 /**
- * @brief Gestisce gli errori di allocazione della memoria
+ * @brief Handles memory allocation errors
  *
- * Questa funzione viene usata quando si alloca una porzione di memoria tramite malloc o realloc.
- * Nel caso in cui l'area di memoria non venga allocata correttamente si termina il programma con un messaggio di errore.
+ * This function is used when allocating a block of memory using malloc or realloc.
+ * If the memory area is not allocated correctly, it terminates the program with an error message.
  *
- * @param ptr puntatore alla memoria allocata da verificare
- * @param error_string stringa contenente il messaggio di errore da stampare in caso di fallimento
+ * @param ptr pointer to the allocated memory to be checked
+ * @param error_string string containing the error message to be printed in case of failure
  */
-
 void handle_malloc_error(void *ptr, const char *error_string)
 {
     if (!ptr)
@@ -26,16 +25,16 @@ void handle_malloc_error(void *ptr, const char *error_string)
 }
 
 /**
- * @brief Invia tutti i byte necessari sul socket
+ * @brief Sends all required bytes on the socket
  *
- * Questa funzione viene utilizzata in caso la send non riesca ad inviare tutti i dati sul socket e permette di inviare dati
- * finché tutti i dati non sono stati inoltrati.
- * È particolarmente utile quando il payload è di grandi dimensioni.
+ * This function is used in case send fails to transmit all the data on the socket,
+ * and it allows sending data until all data has been transmitted.
+ * It is particularly useful when the payload is large.
  *
- * @param dest_fd file descriptor a cui inviare i dati
- * @param buffer buffer da inviare
- * @param length lunghezza del buffer in byte
- * @return il numero di byte inviati, oppure -1 in caso di errore
+ * @param dest_fd file descriptor to which the data should be sent
+ * @param buffer buffer to be sent
+ * @param length length of the buffer in bytes
+ * @return the number of bytes sent, or -1 in case of error
  */
 ssize_t send_all(int dest_fd, char *buffer, size_t length)
 {
@@ -53,16 +52,16 @@ ssize_t send_all(int dest_fd, char *buffer, size_t length)
 }
 
 /**
- * @brief Riceve tutti i byte necessari sul socket
+ * @brief Receives all required bytes on the socket
  *
- * Questa funzione viene utilizzata in caso la recv non riesca ad ricevere tutti i dati sul socket e permette di ricevere dati
- * finché tutti i dati non sono stati ricevuti.
- * È particolarmente utile quando il payload è di grandi dimensioni.
+ * This function is used in case recv fails to receive all the data on the socket,
+ * and it allows receiving data until all data has been received.
+ * It is particularly useful when the payload is large.
  *
- * @param source_fd file descriptor da cui ricevere il messaggio
- * @param buffer buffer da inviare
- * @param length lunghezza del buffer in byte
- * @return il numero di byte ricevuti, oppure -1 in caso di errore
+ * @param source_fd file descriptor from which to receive the message
+ * @param buffer buffer in which to store the data
+ * @param length length of the buffer in bytes
+ * @return the number of bytes received, or -1 in case of error
  */
 ssize_t receive_all(int source_fd, char *buffer, size_t length)
 {
@@ -78,18 +77,19 @@ ssize_t receive_all(int source_fd, char *buffer, size_t length)
     }
     return total_received;
 }
+
 /**
- * @brief Invia un messaggio alla destinazione specificata
+ * @brief Sends a message to the specified destination
  *
- * Questa funzione invia un messaggio al client identificato dal file descriptor fornito.
- * I valori numerici vengono convertiti in network byte order prima dell'invio.
+ * This function sends a message to the client identified by the provided file descriptor.
+ * Numeric values are converted to network byte order before sending.
  *
- * @param dest_fd file descriptor a cui inviare il messaggio
- * @param type tipo del messaggio da inviare
- * @param payload puntatore ai dati del payload da inviare
- * @param payload_length lunghezza del payload in byte
+ * @param dest_fd file descriptor to which the message should be sent
+ * @param type type of the message to be sent
+ * @param payload pointer to the payload data to be sent
+ * @param payload_length length of the payload in bytes
  *
- * @return 1 nel caso l'invio abbia avuto successo e -1 nel caso di errore
+ * @return 1 if the message was sent successfully, or -1 in case of error
  */
 int send_msg(int dest_fd, MessageType type, char *payload, size_t payload_length)
 {
@@ -109,19 +109,19 @@ int send_msg(int dest_fd, MessageType type, char *payload, size_t payload_length
 }
 
 /**
- * @brief Riceve un messaggio da una sorgente specificata
+ * @brief Receives a message from a specified source
  *
- * Questa funzione riceve un messaggio dal client identificato dal file descriptor fornito.
- * I valori numerici vengono convertiti da network byte order a host byte order dopo la ricezione.
+ * This function receives a message from the client identified by the provided file descriptor.
+ * Numeric values are converted from network byte order to host byte order after reception.
  *
- * In particolare si gestisce l'aggiunta o meno del terminatore di stringa nel caso in cui il payload del messaggio
- * sia di tipo text protocol o binary protocol come nel caso di MSG_RES_QUIZ_LIST e MSG_RES_RANKING.
+ * In particular, it handles whether to add a string terminator in the case where the message payload
+ * is of text protocol type or binary protocol as in the case of MSG_RES_QUIZ_LIST and MSG_RES_RANKING.
  *
- * @param source_fd file descriptor da cui ricevere il messaggio
- * @param msg Puntatore alla struttura Message in cui memorizzare i dati ricevuti
+ * @param source_fd file descriptor from which to receive the message
+ * @param msg pointer to the Message structure in which to store the received data
  *
- * @return 1 se la ricezione ha avuto esito positivo, 0 se il client ha chiuso la connessione,
- *         o un valore negativo in caso di errore.
+ * @return 1 if the message was received successfully, 0 if the client closed the connection,
+ *         or a negative value in case of error.
  */
 int receive_msg(int source_fd, Message *msg)
 {
@@ -142,20 +142,20 @@ int receive_msg(int source_fd, Message *msg)
     msg->payload_length = ntohl(net_msg_payload_length);
     msg->payload = NULL;
 
-    // aggiungo lo spazio per il terminatore di stringa solamente nei messaggi che usano text protocol
+    // Add space for the string terminator only for messages that use the text protocol
     if (msg->type == MSG_RES_QUIZ_LIST || msg->type == MSG_RES_RANKING || msg->type == MSG_QUIZ_SELECT)
     {
-        // se msg->payload_length è nulla si è inviato un messaggio con solo il tipo, non occorre fare receive
+        // If msg->payload_length is zero, a message with only the type has been sent, so no need to receive
         if (msg->payload_length == 0)
             return 1;
         msg->payload = (char *)malloc(msg->payload_length);
-        handle_malloc_error(msg->payload, "Errore nell'allocazione della memoria per il payload");
+        handle_malloc_error(msg->payload, "Memory allocation error for the payload");
     }
     else
     {
         msg->payload = (char *)malloc(msg->payload_length + 1);
-        handle_malloc_error(msg->payload, "Errore nell'allocazione della memoria per il payload");
-        // se msg->payload_length è nulla si è inviato un messaggio con solo il tipo, non occorre fare receive
+        handle_malloc_error(msg->payload, "Memory allocation error for the payload");
+        // If msg->payload_length is zero, a message with only the type has been sent, so no need to receive
         if (msg->payload_length == 0)
         {
             msg->payload[0] = '\0';
@@ -169,7 +169,7 @@ int receive_msg(int source_fd, Message *msg)
         free(msg->payload);
         return bytes_received;
     }
-    // se il messaggio usa text protocol vado ad aggiungere il terminatore di stringa al payload
+    // If the message uses the text protocol, add the string terminator to the payload
     if (!(msg->type == MSG_RES_QUIZ_LIST || msg->type == MSG_RES_RANKING || msg->type == MSG_QUIZ_SELECT))
         msg->payload[msg->payload_length] = '\0';
 
@@ -177,13 +177,13 @@ int receive_msg(int source_fd, Message *msg)
 }
 
 /**
- * @brief Pulisce il buffer di input standard.
+ * @brief Clears the standard input buffer.
  *
- * Questa funzione legge e scarta tutti i caratteri presenti nel buffer di input
- * fino al carattere di nuova linea o fino a raggiungere l'End Of File.
+ * This function reads and discards all characters present in the input buffer
+ * until a newline character is encountered or the End Of File is reached.
  *
- * È utile per rimuovere eventuali caratteri residui nel buffer dopo operazioni di input,
- * prevenendo comportamenti indesiderati in successive letture.
+ * It is useful for removing any residual characters in the buffer after input operations,
+ * preventing unwanted behavior in subsequent reads.
  *
  */
 void clear_input_buffer()
@@ -194,40 +194,40 @@ void clear_input_buffer()
 }
 
 /**
- * @brief Legge una stringa dall'input standard con gestione degli errori
+ * @brief Reads a string from standard input with error handling
  *
- * Questa funzione legge una linea di input dalla console e la memorizza nel buffer fornito.
- * Se la lunghezza dell'input supera la dimensione del buffer, il buffer di input viene svuotato
- * e viene restituito un errore. Gestisce anche il caso in cui l'utente non inserisce alcun valore.
+ * This function reads a line of input from the console and stores it in the provided buffer.
+ * If the length of the input exceeds the size of the buffer, the input buffer is cleared
+ * and an error is returned. It also handles the case where the user enters no value.
  *
- * @param buffer puntatore al buffer in cui memorizzare l'input dell'utente
- * @param buffer_size dimensione del buffer in byte
- * @return restituisce 1 se l'input è stato letto correttamente, -1 in caso di errore
+ * @param buffer pointer to the buffer in which to store the user's input
+ * @param buffer_size size of the buffer in bytes
+ * @return returns 1 if the input was read correctly, -1 in case of error
  *
  */
 int get_console_input(char *buffer, int buffer_size)
 {
     if (fgets(buffer, buffer_size, stdin))
     {
-        // trova la posizione del newline e la sostituisce con \0
+        // Find the position of the newline and replace it with '\0'
         size_t len = strcspn(buffer, "\n");
         if (buffer[len] == '\n')
             buffer[len] = '\0';
         else
         {
             clear_input_buffer();
-            printf("Errore: il valore inserito supera la lunghezza massima di %d caratteri \n", buffer_size);
+            printf("Error: the input exceeds the maximum length of %d characters \n", buffer_size);
             return -1;
         }
         if (len == 0)
         {
-            printf("Errore: il valore inserito è vuoto\n");
+            printf("Error: the input is empty\n");
             return -1;
         }
     }
     else
     {
-        printf("Errore durante la lettura dell'input\n");
+        printf("Error reading input\n");
         return -1;
     }
 

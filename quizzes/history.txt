@@ -1,16 +1,16 @@
-Storia
+History
 
-Domanda: Quale è il nome in codice della più grande operazione anfibia della storia?
-Risposte: overlord, operazione overlord
+Question: What is the codename of the largest amphibious operation in history?
+Answers: overlord, operation overlord
 
-Domanda: Chi era il primo imperatore dell'Impero Romano?
-Risposte: augusto, ottaviano augusto
+Question: Who was the first emperor of the Roman Empire?
+Answers: augustus, octavian augustus
 
-Domanda: Quale fu la prima città nella storia ad essere colpita da una bomba atomica?
-Risposte: hiroshima
+Question: Which was the first city in history to be hit by an atomic bomb?
+Answers: hiroshima
 
-Domanda: Chi ha guidato la spedizione che ha scoperto l'America nel 1492?
-Risposte: cristoforo colombo, colombo
+Question: Who led the expedition that discovered America in 1492?
+Answers: christopher columbus, columbus
 
-Domanda: Quale battaglia del 480 a.C. vide 300 spartani combattere contro l'esercito persiano di Serse?
-Risposte: battaglia delle termopili, termopili
+Question: Which battle in 480 B.C. saw 300 Spartans fighting against Xerxes' Persian army?
+Answers: battle of thermopylae, thermopylae

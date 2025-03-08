@@ -1,16 +1,16 @@
-Natura e Scienza
+Nature and Science
 
-Domanda: Qual è il mammifero più grande del mondo?
-Risposte: balenottera azzurra, balena azzurra
+Question: What is the largest mammal in the world?
+Answers: blue whale, blue whale
 
-Domanda: Quale pianta è nota per la sua capacità di sopravvivere nel deserto?
-Risposte: cactus, cactaceae
+Question: Which plant is known for its ability to survive in the desert?
+Answers: cactus, cactaceae
 
-Domanda: Qual è l'uccello più veloce del mondo?
-Risposte: falco pellegrino, pellegrino
+Question: What is the fastest bird in the world?
+Answers: peregrine falcon, peregrine
 
-Domanda: Quale processo naturale converte l’anidride carbonica in ossigeno grazie alla luce solare?
-Risposte: fotosintesi, fotosintesi clorofilliana
+Question: Which natural process converts carbon dioxide into oxygen using sunlight?
+Answers: photosynthesis, chlorophyll photosynthesis
 
-Domanda: Quale fenomeno naturale si verifica quando la Luna copre il Sole?
-Risposte: eclissi solare, eclissi
+Question: Which natural phenomenon occurs when the moon covers the sun?
+Answers: solar eclipse, eclipse

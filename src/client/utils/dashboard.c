@@ -2,23 +2,23 @@
 #include "utils.h"
 
 /**
- * @brief Mostra il menu del client
+ * @brief Displays the client menu
  */
 void show_menu()
 {
     printf("Trivia Quiz\n");
     printf("+++++++++++++++++++++++++++\n");
-    printf("Menù\n");
-    printf("1 - Comincia una sessione Trivia\n");
-    printf("2 - Esci\n");
+    printf("Menu\n");
+    printf("1 - Start a Trivia session\n");
+    printf("2 - Exit\n");
     printf("+++++++++++++++++++++++++++\n");
-    printf("La tua scelta: ");
+    printf("Your choice: ");
 }
 
 /**
- * @brief Mostra il quiz selezionato
+ * @brief Displays the selected quiz
  *
- * @param msg puntatore al messaggio che contiene il nome del quiz ricevuto
+ * @param msg pointer to the message that contains the received quiz name
  */
 void handle_selected_quiz(Message *msg)
 {
