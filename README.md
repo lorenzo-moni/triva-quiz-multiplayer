@@ -1,6 +1,6 @@
 # Trivia Quiz Multiplayer
 
-#### Computer Networks Project A.A. 24/25
+#### Computer Networks Project A.Y. 24/25
 
 Trivia Quiz Multiplayer is a multiplayer quiz game developed in C. The project allows multiple players to challenge each other by answering general knowledge questions, with customizable quizzes stored in the `quizzes` folder.
 
